@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modular-pytest-gen"
+version = "0.1.0"
+description = "A modular generator for pytest files using AST parsing and LLM prompts."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0"
+]
+
+[tool.modular_pytest_gen]
+# The root folder where source code lives
+source_root = "src"
+
+# Top-level module name used for constructing absolute imports in test files
+import_prefix = "package"
+
+# Global context injected into every prompt to give the LLM domain knowledge
+global_context = [
+    "src/package/module1/example1.py",
+    "src/package/module2/example2.py"
+]
+
+[tool.modular_pytest_gen.layout]
+# Options: "adjacent" (Numpy style) or "external" (separate root folder)
+strategy = "external" 
+
+# Options: "nested" or "flat" (Only applies if strategy is "external")
+structure = "nested"  
+
+# The name or path of the external test directory
+test_root = "tests"
+
+[tool.modular_pytest_gen.discovery]
+# If true, the AST parser will only look at functions exposed via __all__ = [...]
+respect_dunder_all = true
+
+# Globally excluded patterns across the entire source tree
+exclude_patterns = [
+    "*__init__.py",
+    "*test_*.py"
+]
+
+# Explicit blocklist for heavy-dependency routines that local LLMs cannot mock cleanly
+exclude_functions = [
+    "run_live_migration",
+    "connect_hardware_socket"
+]
