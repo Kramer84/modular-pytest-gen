@@ -27,7 +27,8 @@ def test_load_config_defaults(tmp_path):
     assert config.source_root == "src"
     assert config.layout.strategy == "external"
     assert config.discovery.respect_dunder_all is True
-    assert len(config.discovery.exclude_patterns) == 0
+    # Updated to match the new defaults established in config.py
+    assert config.discovery.exclude_patterns == ["*__init__.py", "*test_*.py"]
 
 def test_load_config_with_empty_tool_section(tmp_path):
     toml_content = """
@@ -87,3 +88,25 @@ def test_load_config_invalid_toml(tmp_path):
     
     with pytest.raises(ValueError, match="Failed to parse TOML file"):
         load_config(file_path)
+        
+def test_load_config_dedicated_file_root_namespace(tmp_path):
+    # Simulates a dedicated modular_pytest_gen.toml file where the config
+    # is at the root level, not nested under [tool.modular_pytest_gen]
+    toml_content = """
+    source_root = "custom_src"
+    import_prefix = "custom_pkg"
+    
+    [layout]
+    strategy = "adjacent"
+    structure = "flat"
+    """
+    file_path = tmp_path / "modular_pytest_gen.toml"
+    file_path.write_text(toml_content, encoding="utf-8")
+    
+    from modular_pytest_gen.config import load_config
+    config = load_config(file_path)
+    
+    # If this fails, the parser is incorrectly forcing [tool.modular_pytest_gen]
+    assert config.source_root == "custom_src"
+    assert config.import_prefix == "custom_pkg"
+    assert config.layout.strategy == "adjacent"
