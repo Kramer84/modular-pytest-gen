@@ -10,13 +10,10 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     # Required for parsing TOML in Python 3.9 and 3.10
-    "tomli>=2.0.1; python_version < '3.11'"
-]
-
-[project.optional-dependencies]
-dev = [
+    "tomli>=2.0.1; python_version < '3.11'",
     "pytest>=7.0.0"
 ]
+
 
 # Note: If you want to use modular-pytest-gen on its own codebase, 
 # you will eventually need to re-add [tool.modular_pytest_gen] here.
