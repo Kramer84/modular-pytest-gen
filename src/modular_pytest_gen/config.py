@@ -25,6 +25,12 @@ class DiscoveryConfig:
     exclude_patterns: List[str] = field(default_factory=lambda: ["*__init__.py", "*test_*.py"])
     exclude_functions: List[str] = field(default_factory=list)
 
+@dataclass
+class LLMConfig:
+    provider: str = "ollama"
+    model: str = "qwen2.5-coder:7b-instruct-q8_0"
+    host: str = "http://localhost:11434"
+    structured: bool = False
 
 @dataclass
 class ProjectConfig:
@@ -33,23 +39,21 @@ class ProjectConfig:
     global_context: List[str] = field(default_factory=list)
     layout: LayoutConfig = field(default_factory=LayoutConfig)
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
+    llm: LLMConfig = field(default_factory=LLMConfig)
 
-
-def load_config(config_path: Path | str = "pyproject.toml") -> ProjectConfig:
+def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
     """
     Parses a TOML file and returns a populated ProjectConfig object.
-    Can parse both a standard pyproject.toml or a dedicated config file,
-    provided the variables are nested under [tool.modular_pytest_gen].
+    Defaults to looking for a dedicated `autotest.toml` file in the root directory.
+    Also supports parsing from a standard `pyproject.toml` if explicitly passed.
     """
     if tomllib is None:
         raise ImportError(
-            "The 'tomli' library is required to parse TOML files on Python < 3.11. "
-            "Please install it or upgrade your environment."
+            "The 'tomli' library is required to parse TOML files on Python < 3.11."
         )
 
     path = Path(config_path)
     if not path.exists():
-        # Fall back to defaults if no config file is found
         return ProjectConfig()
 
     with open(path, "rb") as f:
@@ -58,8 +62,15 @@ def load_config(config_path: Path | str = "pyproject.toml") -> ProjectConfig:
         except Exception as e:
             raise ValueError(f"Failed to parse TOML file at {path}: {e}")
 
-    # Standardize extraction: Always look under [tool.modular_pytest_gen]
-    tool_data = data.get("tool", {}).get("modular_pytest_gen", {})
+    # If parsing a pyproject.toml, we MUST extract from [tool.modular_pytest_gen]
+    if path.name == "pyproject.toml":
+        tool_data = data.get("tool", {}).get("modular_pytest_gen", {})
+    else:
+        # For dedicated files like autotest.toml, prioritize a nested tool block 
+        # in case they copy-pasted it, otherwise parse directly from the root.
+        nested = data.get("tool", {}).get("modular_pytest_gen", {})
+        tool_data = nested if nested else data
+
     if not tool_data:
         return ProjectConfig()
 
@@ -78,10 +89,19 @@ def load_config(config_path: Path | str = "pyproject.toml") -> ProjectConfig:
         exclude_functions=discovery_data.get("exclude_functions", []),
     )
 
+    llm_data = tool_data.get("llm", {})
+    llm = LLMConfig(
+        provider=llm_data.get("provider", "ollama"),
+        model=llm_data.get("model", "qwen2.5-coder:7b-instruct-q8_0"),
+        host=llm_data.get("host", "http://localhost:11434"),
+        structured=llm_data.get("structured", False),
+    )
+
     return ProjectConfig(
         source_root=tool_data.get("source_root", "src"),
         import_prefix=tool_data.get("import_prefix", ""),
         global_context=tool_data.get("global_context", []),
         layout=layout,
-        discovery=discovery
+        discovery=discovery,
+        llm=llm
     )

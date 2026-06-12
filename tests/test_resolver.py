@@ -110,3 +110,22 @@ def lazy_load_secret():
     # If this fails, ast.walk incorrectly grabbed the import inside the function
     # and promoted it to the public API namespace
     assert resolver.get_import_path(hidden_file, "SecretClass") == "pkg.hidden.SecretClass"
+
+def test_resolver_subpackage_alias(tmp_path):
+    # Tests the fix for the Sub-Package blindspot
+    src_dir = tmp_path / "src"
+    pkg_dir = src_dir / "pkg"
+    sub_dir = pkg_dir / "core"
+    sub_dir.mkdir(parents=True)
+    
+    # pkg/__init__.py imports from the core directory (which is a sub-package)
+    (pkg_dir / "__init__.py").write_text("from .core import BaseException")
+    
+    # The actual physical file is inside the core/ sub-package
+    core_init = sub_dir / "__init__.py"
+    core_init.write_text("class BaseException:\n    pass")
+    
+    resolver = ImportResolver(source_root=src_dir, import_prefix="pkg")
+    
+    # The resolver should correctly recognize that "core" is a directory and map BaseException to it
+    assert resolver.get_import_path(core_init, "BaseException") == "pkg.BaseException"

@@ -14,13 +14,13 @@ Writing tests after the implementation (post-hoc testing) inherently risks calci
 
 Configuration
 
-The tool requires configuration to understand your project's layout and discovery rules. There are two ways to configure modular-pytest-gen for a target repository:
+The tool defaults to looking for a dedicated configuration file named autotest.toml in the root of your target project.
 
-Option 1: pyproject.toml (Recommended)
+Option 1: Dedicated File autotest.toml (Recommended for Development)
 
-Add the configuration block directly into the target project's existing pyproject.toml file. This is the modern Python standard.
+Create a file named autotest.toml in the root of the project you want to test. Because the file is dedicated to this tool, you do not need to nest the configuration under a [tool] namespace.
 
-[tool.modular_pytest_gen]
+# autotest.toml
 source_root = "src"
 import_prefix = "my_package"
 global_context = [
@@ -28,17 +28,22 @@ global_context = [
     "src/my_package/exceptions.py"
 ]
 
-[tool.modular_pytest_gen.layout]
+[layout]
 strategy = "external" 
 structure = "nested"  
 test_root = "tests"
 
-[tool.modular_pytest_gen.discovery]
+[discovery]
 respect_dunder_all = true
 exclude_patterns = ["*__init__.py", "*test_*.py"]
 exclude_functions = ["heavy_database_call"]
 
 
-Option 2: Standalone Template
+Option 2: pyproject.toml
 
-If you do not want to modify your target's pyproject.toml, you can drop the provided modular_pytest_gen_config.template.toml file into the root of your target project and point the CLI to it. The tool searches for the [tool.modular_pytest_gen] section regardless of the filename.
+If you prefer to keep your repository clean and consolidate tool configurations, you can embed the settings inside your target project's pyproject.toml. The parser will automatically adapt and extract the configuration from the standard [tool.modular_pytest_gen] block.
+
+[tool.modular_pytest_gen]
+source_root = "src"
+import_prefix = "my_package"
+# ... layout and discovery tables follow standard TOML nesting

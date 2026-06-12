@@ -24,8 +24,8 @@ def test_layout_manager_external_flat():
     source_path = Path("src/my_pkg/utils/math.py")
     test_path = manager.get_test_file_path(source_path)
     
-    # Should strip all intermediate directories
-    assert test_path == Path("tests/test_math.py")
+    # Should inject all intermediate directories to prevent collisions
+    assert test_path == Path("tests/test_my_pkg_utils_math.py")
 
 def test_layout_manager_external_nested_within_source_root():
     config = ProjectConfig(
@@ -51,8 +51,12 @@ def test_layout_manager_external_nested_outside_source_root():
     source_path = Path("scripts/tools/helper.py")
     test_path = manager.get_test_file_path(source_path)
     
-    # Should gracefully fallback to a flat structure in the test root
-    assert test_path == Path("tests/test_helper.py")
+    # Determine the expected safe prefix dynamically based on the runtime absolute path
+    safe_prefix = str(source_path.parent.resolve()).replace("/", "_").replace("\\", "_").strip("_")
+    expected_path = Path("tests") / f"test_external_{safe_prefix}_{source_path.name}"
+    
+    # Should gracefully fallback to a flattened absolute structure in the test root
+    assert test_path == expected_path
 
 def test_layout_manager_invalid_file():
     config = ProjectConfig()
