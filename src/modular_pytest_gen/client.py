@@ -21,7 +21,6 @@ class BaseLLMClient(abc.ABC):
         for call in tool_calls:
             if call.get("function", {}).get("name") == "write_pytest_suite":
                 args = call["function"].get("arguments", {})
-                # Some endpoints return strings, others return parsed dicts
                 if isinstance(args, str):
                     try:
                         args = json.loads(args)
@@ -79,7 +78,6 @@ class OllamaClient(BaseLLMClient):
             code = self._extract_from_tool(message["tool_calls"])
             if code:
                 return code
-            # FIX: Fallback if JSON decode fails (e.g., Mistral escaping errors)
             return self._extract_from_markdown(str(message))
             
         return self._extract_from_markdown(message.get("content", ""))
@@ -126,7 +124,16 @@ class MistralClient(BaseLLMClient):
             code = self._extract_from_tool(message["tool_calls"])
             if code:
                 return code
-            # FIX: Fallback if JSON decode fails (e.g., Mistral escaping errors)
             return self._extract_from_markdown(str(message))
             
         return self._extract_from_markdown(message.get("content", ""))
+    
+    
+def unload_ollama_model(model_name: str):
+    """Issues a direct background subprocess system command call to unload the active model."""
+    print(f"\n[CLEANUP] Stopping Ollama model context framework execution for: {model_name}")
+    try:
+        subprocess.run(["ollama", "stop", model_name], capture_output=True, text=True)
+        print("[CLEANUP] Model unloaded successfully.")
+    except Exception as e:
+        print(f"[WARN] Failed to issue explicit system model cleanup command: {e}")

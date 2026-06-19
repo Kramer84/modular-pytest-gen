@@ -14,6 +14,13 @@ else:
 
 @dataclass
 class LayoutConfig:
+    """Configuration settings for test file placement and structure.
+
+    Attributes:
+        strategy (str): The placement strategy (e.g., 'adjacent', 'external').
+        structure (str): The folder structure type (e.g., 'flat', 'nested').
+        test_root (str): The directory name where tests are located if using external strategy.
+    """
     strategy: str = "external"
     structure: str = "nested"
     test_root: str = "tests"
@@ -21,12 +28,32 @@ class LayoutConfig:
 
 @dataclass
 class DiscoveryConfig:
+    """Configuration settings for source file discovery and filtering.
+
+    Attributes:
+        respect_dunder_all (bool): Whether to filter discovered files based on __all__ definitions.
+        exclude_patterns (List[str]): Glob patterns to exclude during file discovery.
+        exclude_functions (List[str]): List of specific function names to ignore during analysis.
+    """
     respect_dunder_all: bool = True
-    exclude_patterns: List[str] = field(default_factory=lambda: ["*__init__.py", "*test_*.py"])
+    exclude_patterns: List[str] = field(default_factory=lambda: [
+        "*__init__.py",
+        "build",       # Directory name to exclude
+        "tests",       # Directory name to exclude
+        "*test_*.py"
+    ])
     exclude_functions: List[str] = field(default_factory=list)
 
 @dataclass
 class LLMConfig:
+    """Configuration settings for LLM service integration.
+
+    Attributes:
+        provider (str): The API provider name (e.g., 'ollama', 'openai').
+        model (str): The specific model identifier to use.
+        host (str): The endpoint URL for the LLM service.
+        structured (bool): Whether to enforce structured output parsing.
+    """
     provider: str = "ollama"
     model: str = "qwen2.5-coder:7b-instruct-q8_0"
     host: str = "http://localhost:11434"
@@ -34,18 +61,42 @@ class LLMConfig:
 
 @dataclass
 class ProjectConfig:
+    """Root configuration object containing all project-level settings.
+
+    Attributes:
+        source_root (str): The base directory for source code.
+        import_prefix (str): Prefix used for relative imports in generated tests.
+        global_context (List[str]): Additional context paths or items for the LLM.
+        custom_instructions (str): Specific user instructions for test generation.
+        layout (LayoutConfig): Nested layout configuration.
+        discovery (DiscoveryConfig): Nested discovery configuration.
+        llm (LLMConfig): Nested LLM configuration.
+    """
     source_root: str = "src"
     import_prefix: str = ""
     global_context: List[str] = field(default_factory=list)
+    custom_instructions: str = ""  # Dedicated text instruction field
     layout: LayoutConfig = field(default_factory=LayoutConfig)
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
 
 def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
-    """
-    Parses a TOML file and returns a populated ProjectConfig object.
-    Defaults to looking for a dedicated `autotest.toml` file in the root directory.
-    Also supports parsing from a standard `pyproject.toml` if explicitly passed.
+    """Parses a TOML configuration file into a ProjectConfig object.
+
+    This function attempts to load settings from a specified TOML file. It supports:
+    1. A standalone config file (default: 'autotest.toml').
+    2. A 'pyproject.toml' file, automatically looking for the [tool.modular_pytest_gen] section.
+
+    Args:
+        config_path (Path | str): The path to the configuration file.
+
+    Returns:
+        ProjectConfig: A populated configuration object with defaults applied if the file
+            is missing or if specific fields are absent.
+
+    Raises:
+        ImportError: If the 'tomli' library is missing on Python < 3.11.
+        ValueError: If the TOML file is malformed or cannot be parsed.
     """
     if tomllib is None:
         raise ImportError(
@@ -62,12 +113,9 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
         except Exception as e:
             raise ValueError(f"Failed to parse TOML file at {path}: {e}")
 
-    # If parsing a pyproject.toml, we MUST extract from [tool.modular_pytest_gen]
     if path.name == "pyproject.toml":
         tool_data = data.get("tool", {}).get("modular_pytest_gen", {})
     else:
-        # For dedicated files like autotest.toml, prioritize a nested tool block 
-        # in case they copy-pasted it, otherwise parse directly from the root.
         nested = data.get("tool", {}).get("modular_pytest_gen", {})
         tool_data = nested if nested else data
 
@@ -101,6 +149,7 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
         source_root=tool_data.get("source_root", "src"),
         import_prefix=tool_data.get("import_prefix", ""),
         global_context=tool_data.get("global_context", []),
+        custom_instructions=tool_data.get("custom_instructions", ""),
         layout=layout,
         discovery=discovery,
         llm=llm

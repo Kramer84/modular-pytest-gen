@@ -3,14 +3,42 @@ from typing import Union
 from .config import ProjectConfig
 
 class LayoutManager:
-    """
-    Determines the correct output path for generated test files based on 
-    the user's layout configuration (adjacent vs external, flat vs nested).
+    """Manages the calculation of test file paths based on defined project layout strategies.
+
+    This class serves as a central resolver to determine where test files should be
+    located relative to source files, supporting configurations like adjacent
+    file placement or centralized external test directories.
+
+    Attributes:
+        config (ProjectConfig): The configuration object containing project layout
+            definitions (e.g., strategy type, test root path, source root path).
     """
     def __init__(self, config: ProjectConfig):
+        """Initializes the manager with the project's configuration.
+
+        Args:
+            config (ProjectConfig): The configuration instance governing layout behavior.
+        """
         self.config = config
 
     def get_test_file_path(self, source_file_path: Union[str, Path]) -> Path:
+        """Calculates the absolute or relative filesystem path for a corresponding test file.
+
+        The method implements two primary strategies:
+        1. 'adjacent': Places the test file in the same directory as the source file.
+        2. 'external': Places the test file in a dedicated test directory, with options
+        to either flatten the path or mirror the nested source structure.
+
+        Args:
+            source_file_path (Union[str, Path]): The path to the source file (e.g., 'path/to/module.py').
+
+        Returns:
+            Path: The calculated path where the test file should be generated.
+
+        Raises:
+            ValueError: If the source path does not point to a Python file, if the layout
+                strategy is unsupported, or if the layout structure is undefined.
+        """
         source_path = Path(source_file_path)
         if not source_path.name.endswith(".py"):
             raise ValueError(f"Source path must be a Python file: {source_path}")
@@ -28,12 +56,10 @@ class LayoutManager:
             try:
                 relative_dir = source_path.parent.relative_to(source_root)
             except ValueError:
-                # Fallback to flattening the absolute path to prevent collisions
                 safe_prefix = str(source_path.parent.resolve()).replace("/", "_").replace("\\", "_").strip("_")
                 return test_root / f"test_external_{safe_prefix}_{source_path.name}"
                 
             if structure == "flat":
-                # Prevent namespace collisions by injecting the relative path into the filename
                 if str(relative_dir) == ".":
                     flat_name = f"test_{source_path.name}"
                 else:

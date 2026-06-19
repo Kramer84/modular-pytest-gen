@@ -14,6 +14,9 @@ dependencies = [
     "pytest>=7.0.0"
 ]
 
+[project.scripts]
+# This exposes the CLI command to the user's terminal after installation
+modular-pytest-gen = "modular_pytest_gen.main:cli_entry"
 
 # Note: If you want to use modular-pytest-gen on its own codebase, 
 # you will eventually need to re-add [tool.modular_pytest_gen] here.

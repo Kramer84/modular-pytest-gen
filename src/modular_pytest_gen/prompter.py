@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional
+import textwrap
+from typing import Any, Dict
 from . import templates
 
 class PromptBuilder:
@@ -39,18 +40,31 @@ class PromptBuilder:
 
         return system_base + context_str
 
-    def build_user_prompt(self, function_metadata: Dict[str, Any], custom_instructions: str = "") -> str:
+    def build_user_prompt(self, function_metadata: Dict[str, Any], function_import_statement: str, import_statement: str, custom_instructions: str = "") -> str:
         """
         Constructs the unique prompt payload for an individual function targeted for testing.
         """
-        user_prompt = templates.USER_PROMPT_BASE.format(
-            signature=function_metadata['signature'],
-            code=function_metadata['code']
+        user_prompt = templates.USER_PROMPT_HEADER + "\n"
+        
+        user_prompt += templates.USER_PROMPT_IMPORTS.format(
+            import_statement=import_statement,
+            function_import_statement=function_import_statement
         )
+        
+        if function_metadata.get("local_context_code"):
+            context_blocks = "\n".join(function_metadata["local_context_code"])
+            user_prompt += templates.USER_PROMPT_LOCAL_CONTEXT.format(context_blocks=context_blocks)
+
+        user_prompt += templates.USER_PROMPT_SIGNATURE.format(signature=function_metadata["signature"])
         
         docstring = function_metadata.get("docstring")
         if docstring:
-            user_prompt += templates.USER_PROMPT_DOCSTRING.format(docstring=docstring)
+            user_prompt += templates.USER_PROMPT_DOCSTRING.format(docstring=textwrap.indent(docstring, '    '))
+        
+        user_prompt += templates.USER_PROMPT_BASE.format(
+            import_statement=import_statement,
+            code=function_metadata['code']
+        )
 
         if custom_instructions:
             user_prompt += templates.USER_PROMPT_DIRECTIVES.format(custom_instructions=custom_instructions)
@@ -60,26 +74,30 @@ class PromptBuilder:
 
     def get_tool_schema(self) -> Dict[str, Any]:
         """
-        Returns the JSON schema required if using structured_output=True via Tool Calling.
+        Returns a structured schema optimized for headless generation 
+        and easy downstream test script merging.
         """
         return {
             "type": "function",
             "function": {
                 "name": "write_pytest_suite",
-                "description": "Outputs the generated pytest suite as raw Python code.",
+                "description": "Outputs clean, functional pytest components for the target unit.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "reasoning": {
+                        "local_fixtures_and_mocks": {
                             "type": "string",
-                            "description": "Brief explanation of the edge cases covered."
+                            "description": "Any specific pytest fixtures, mock definitions, or setups required strictly for these tests. Leave empty if none are needed."
                         },
-                        "pytest_code": {
-                            "type": "string",
-                            "description": "The raw Python code containing the pytest functions."
+                        "test_cases": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "A list of individual test function implementations (e.g., ['def test_case_1()...', 'def test_case_2()...']). Do not include imports here."
                         }
                     },
-                    "required": ["pytest_code"]
+                    "required": ["test_cases"]
                 }
             }
         }
