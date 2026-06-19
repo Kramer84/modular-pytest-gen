@@ -223,12 +223,6 @@ def run_generation(args):
             if not functions_to_test:
                 continue
 
-            test_path = layout.get_test_file_path(target_file)
-            test_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            if not args.dry_run and not test_path.exists():
-                test_path.write_text("import pytest\n\n", encoding="utf-8")
-
             for func in functions_to_test:
                 if func["name"] in config.discovery.exclude_functions:
                     print(f"  -> Skipping function: {func['name']} (Blacklisted)")

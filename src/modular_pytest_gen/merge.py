@@ -16,29 +16,26 @@ class TestMerger:
             print(f"[MERGE] No temporary directory found at {self.tmp_dir}. Skipping merge.")
             return
 
-        # Find all target module subdirectories within the temporary folder
+        # Iterate through the module directories
         for module_dir in self.tmp_dir.iterdir():
             if not module_dir.is_dir():
                 continue
 
-            # Determine the target consolidated file path
             relative_target = module_dir.relative_to(self.tmp_dir)
             consolidated_test_file = final_root / relative_target.with_name(f"test_{relative_target.name}.py")
-            consolidated_test_file.parent.mkdir(parents=True, exist_ok=True)
-
-            print(f"[MERGE] Consolidating tests for module: {relative_target.name}")
-
+            
             all_imports: Set[str] = set()
             all_fixtures: list[str] = []
             all_cases: list[str] = []
+            found_verified_tests = False
 
-            # Read every temporary function script inside this module folder
-            for test_script in module_dir.glob("*.py"):
+            # Recursively find ONLY the files that passed validation
+            for test_script in module_dir.rglob("*_verified.py"):
+                found_verified_tests = True
                 try:
                     content = test_script.read_text(encoding="utf-8")
                     tree = ast.parse(content)
                     
-                    # Group code structures semantically using AST nodes
                     for node in tree.body:
                         if isinstance(node, (ast.Import, ast.ImportFrom)):
                             all_imports.add(ast.unparse(node))
@@ -49,15 +46,16 @@ class TestMerger:
                             else:
                                 all_fixtures.append(node_code)
                 except Exception as e:
-                    print(f"  [WARN] Failed to parse temporary file {test_script.name}: {e}")
+                    print(f"  [WARN] Failed to parse verified file {test_script.name}: {e}")
 
-            if not all_cases:
+            if not found_verified_tests or not all_cases:
                 continue
 
-            # Compile into a single structured output script
+            consolidated_test_file.parent.mkdir(parents=True, exist_ok=True)
+            print(f"[MERGE] Consolidating verified tests for module: {relative_target.name}")
+
             merged_content = [
                 '# Generated Modular Pytest Suite',
-                'import pytest',
                 "\n".join(sorted(list(all_imports)))
             ]
             

@@ -39,7 +39,7 @@ class LayoutManager:
             ValueError: If the source path does not point to a Python file, if the layout
                 strategy is unsupported, or if the layout structure is undefined.
         """
-        source_path = Path(source_file_path)
+        source_path = Path(source_file_path).resolve()
         if not source_path.name.endswith(".py"):
             raise ValueError(f"Source path must be a Python file: {source_path}")
         
@@ -50,15 +50,19 @@ class LayoutManager:
             
         elif strategy == "external":
             test_root = Path(self.config.layout.test_root)
-            structure = self.config.layout.structure.lower()
-            source_root = Path(self.config.source_root)
+            # 2. Force the source root to be absolute to prevent ValueError mismatch
+            source_root = Path(self.config.source_root).resolve()
             
             try:
+                # This will now successfully compute the nested route 
+                # (e.g. 'otaf/capabilities') instead of triggering the exception block
                 relative_dir = source_path.parent.relative_to(source_root)
             except ValueError:
-                safe_prefix = str(source_path.parent.resolve()).replace("/", "_").replace("\\", "_").strip("_")
+                safe_prefix = str(source_path.parent).replace("/", "_").replace("\\", "_").strip("_")
                 return test_root / f"test_external_{safe_prefix}_{source_path.name}"
                 
+            structure = self.config.layout.structure.lower()
+            
             if structure == "flat":
                 if str(relative_dir) == ".":
                     flat_name = f"test_{source_path.name}"

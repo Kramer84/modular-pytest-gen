@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 class TestValidator:
     """
     Handles standalone code verification via isolated background processes.
-    Preserves all logs and files for explicit debugging.
+    Preserves all logs, outputs, and pytest tracebacks in function-specific directories.
     """
     def __init__(self, config: Any):
         self.config = config
@@ -38,50 +38,59 @@ class TestValidator:
         function_import_statement: str,
         client: Any,
         tool_schema: Optional[Dict[str, Any]],
-        max_retries: int = 3
+        max_retries: int = 5
     ) -> Optional[str]:
-        """
-        Runs the generation verification loop. Stores raw outputs and executable files
-        permanently inside a modular directory layout for inspection.
-        """
-        # Organize temporary spaces into target module directory slots
+        
+        # Create a dedicated directory for THIS specific function
         rel_module_path = target_file.relative_to(source_root).with_suffix("")
-        module_tmp_dir = self.tmp_dir / rel_module_path
-        module_tmp_dir.mkdir(parents=True, exist_ok=True)
+        func_tmp_dir = self.tmp_dir / rel_module_path / func_metadata['name']
+        func_tmp_dir.mkdir(parents=True, exist_ok=True)
 
         current_user_prompt = user_prompt
+        traceback_log = ""
 
         for attempt in range(1, max_retries + 1):
+            current_temp = min(0.025 + ((attempt - 1) * 0.2), 0.7)
             try:
-                raw_response = client.generate_test(system_prompt, current_user_prompt, tool_schema)
+                raw_response = client.generate_test(system_prompt, current_user_prompt, tool_schema, temperature=current_temp)
             except Exception as e:
                 print(f"    [ERROR] Attempt {attempt}: Connection failed: {e}")
                 continue
 
-            # File names are structured by attempt index to preserve history
-            prefix = f"{func_metadata['name']}_attempt_{attempt}"
-            (module_tmp_dir / f"{prefix}_raw_output.txt").write_text(raw_response, encoding="utf-8")
+            # Save the raw LLM output for audit
+            (func_tmp_dir / f"attempt_{attempt}_raw_output.txt").write_text(raw_response, encoding="utf-8")
 
-            # Resolve the response string layout
             local_fixtures = ""
             test_cases_list = []
-
             payload = self._extract_json_payload(raw_response)
+            
             if payload and "arguments" in payload:
-                # Handle standard structured mode tool parameters
                 args = payload["arguments"]
-                local_fixtures = args.get("local_fixtures_and_mocks", "")
-                test_cases_list = args.get("test_cases", [])
+                local_fixtures = args.get("local_fixtures_and_mocks") or ""
+                # Use 'or []' to safely catch 'null' / NoneType returns
+                test_cases_list = args.get("test_cases") or []
             elif payload and ("test_cases" in payload or "pytest_code" in payload):
-                # Handle raw unstructured JSON fallback configurations
-                local_fixtures = payload.get("local_fixtures_and_mocks", "")
-                test_cases_list = payload.get("test_cases", [payload.get("pytest_code", "")])
+                local_fixtures = payload.get("local_fixtures_and_mocks") or ""
+                test_cases_list = payload.get("test_cases") or [payload.get("pytest_code")]
             else:
-                # Fallback treatment for unstructured plain python script representations
                 test_cases_list = [raw_response]
 
-            # Reassemble into an integrated, executable test script
-            full_script_content = []
+            # Failsafe: if the LLM completely scrambled the JSON array into a string
+            if not isinstance(test_cases_list, list):
+                if isinstance(test_cases_list, str) and test_cases_list.strip():
+                    test_cases_list = [test_cases_list]
+                else:
+                    test_cases_list = []
+
+            if not test_cases_list:
+                print(f"    [WARN] Attempt {attempt}: Extracted test cases list is empty.")
+                # Force loop to continue to next attempt if empty
+                traceback_log = "Error: LLM returned an empty or invalid test cases array."
+                current_user_prompt = f"""{user_prompt}\n\n⚠️ CRITICAL FAILURE SUMMARY:\nThe previous response did not contain a valid array of test code strings in the JSON payload."""
+                continue
+
+            # Reassemble script, forcing the pytest framework import
+            full_script_content = ["import pytest"]
             if import_statement:
                 full_script_content.append(import_statement)
             full_script_content.append(function_import_statement)
@@ -90,35 +99,51 @@ class TestValidator:
             full_script_content.extend(test_cases_list)
 
             executable_script = "\n\n".join(full_script_content) + "\n"
-            executable_file = module_tmp_dir / f"{prefix}_runnable.py"
+            executable_file = func_tmp_dir / f"attempt_{attempt}_runnable.py"
             executable_file.write_text(executable_script, encoding="utf-8")
 
-            # Run verification check under the active interpreter workspace mapping environment
-            result = subprocess.run(
-                [sys.executable, "-m", "pytest", str(executable_file), "-q"],
-                capture_output=True,
-                text=True
-            )
+            # Run verification check with short tracebacks, enforcing a strict 10-second timeout
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pytest", str(executable_file), "--tb=short"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10.0  # Force kill the test if it hangs
+                )
+                traceback_log = result.stdout if result.stdout else result.stderr
+                return_code = result.returncode
+            
+            except subprocess.TimeoutExpired as e:
+                # Catch the infinite loop/hang, kill it, and feed the timeout back to the LLM
+                print(f"    [WARN] Attempt {attempt} triggered a timeout (infinite loop or hang).")
+                traceback_log = f"CRITICAL ERROR: Pytest execution timed out after 10 seconds. You likely created an infinite loop or an incredibly slow matrix operation. Optimize the test."
+                return_code = 1 # Force failure
+            
+            # Save the pytest log to disk so YOU can see what the LLM saw
+            (func_tmp_dir / f"attempt_{attempt}_pytest.log").write_text(traceback_log, encoding="utf-8")
 
             if result.returncode == 0:
                 print(f"    [SUCCESS] Function '{func_metadata['name']}' verified successfully on attempt {attempt}.")
-                # Save an alias pointer reference file indicating the winning candidate copy
-                (module_tmp_dir / f"{func_metadata['name']}_verified.py").write_text(executable_script, encoding="utf-8")
+                # Save the final verified copy
+                (func_tmp_dir / f"{func_metadata['name']}_verified.py").write_text(executable_script, encoding="utf-8")
                 return executable_script
 
-            print(f"    [WARN] Attempt {attempt} failed verification requirements. Advancing feedback mapping loops...")
-            traceback_log = result.stdout if result.stdout else result.stderr
+            print(f"    [WARN] Attempt {attempt} failed verification. Advancing feedback mapping loops...")
             
-            # Append feedback directly to the ongoing user instruction array
             current_user_prompt = f"""{user_prompt}
 
 ⚠️ CRITICAL FAILURE SUMMARY:
-The previous test implementation failed execution validation checks with the following diagnostic runtime logs. 
-Review the traceback, correct syntax issues or assumptions, and output a fresh, functional implementation block.
+The previous test implementation failed execution validation checks. 
+Review the traceback below, correct syntax issues or assertion assumptions, and output a fresh, functional implementation block.
 
 Diagnostic Traceback Error Logs:
 ```text
 {traceback_log}
 ```    
 """
-        return None  # All attempts exhausted without a valid test suite
+        # If we exhaust all retries, write a final summary log for the user to inspect
+        print(f"    [FAIL] Exhausted all {max_retries} retries for '{func_metadata['name']}'.")
+        summary = f"FAILED AFTER {max_retries} ATTEMPTS.\n\nLAST TRACEBACK LOG:\n{traceback_log}"
+        (func_tmp_dir / "FINAL_FAILURE.log").write_text(summary, encoding="utf-8")
+        
+        return None
