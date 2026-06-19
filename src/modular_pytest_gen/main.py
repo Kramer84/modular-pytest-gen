@@ -282,30 +282,25 @@ def run_generation(args):
                     print(f"  [DRY RUN] Generated prompt -> {md_path}")
                     continue
 
-                # Forward context blocks directly to the isolated self-healing processor pipeline
-                try:
-                    test_code = validator.validate_and_heal(
-                        func_metadata=func,
-                        system_prompt=system_prompt,
-                        user_prompt=user_prompt,
-                        import_statement=import_statement,
-                        function_import_statement=function_import_statement,
-                        client=client,
-                        tool_schema=tool_schema
-                    )
-                    if args.verbose:
-                        print(f"  [DEBUG] Generated test code for {func['name']}:\n{test_code}\n")
-                        
-                    if test_code:
-                        # Append verified, executing suite code blocks straight to the active accumulation script path
-                        with open(test_path, "a", encoding="utf-8") as f:
-                            f.write(f"\n\n# Tests for {func['name']}\n")
-                            f.write(test_code)
-                            f.write("\n")
-                    else:
-                        print(f"  [ERROR] Code validation failed to resolve a stable script suite for: {func['name']}.")
-                except Exception as e:
-                    print(f"  [FATAL] Error running validation pipeline context loop on {func['name']}: {e}")
+                # Execute our standalone file preservation validation runner pass
+                validator.validate_and_heal(
+                    target_file=target_file,
+                    source_root=source_root,
+                    func_metadata=func,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    import_statement=import_statement,
+                    function_import_statement=function_import_statement,
+                    client=client,
+                    tool_schema=tool_schema
+                )
+
+        # --- FINAL PHASE: Execute the script compilation consolidation merge ---
+        if not args.dry_run:
+            print("\n==============================================")
+            print("Beginning final test suite script consolidation pass...")
+            merger = TestMerger(tmp_dir=f"{config.layout.test_root}.tmp")
+            merger.merge_all(final_test_root=config.layout.test_root)
 
     except KeyboardInterrupt:
         print("\n[PROCESS] Execution halted by user command interrupt request (Ctrl+C).")
@@ -313,7 +308,6 @@ def run_generation(args):
         # Guarantee model compute resources clear if running an Ollama service target instance
         if not args.dry_run and provider == "ollama":
             unload_ollama_model(llm_model)
-
 def cli_entry():
     parser = argparse.ArgumentParser(description="Modular Pytest Generator using LLMs.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output for debugging.")
