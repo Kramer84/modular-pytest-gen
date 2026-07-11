@@ -11,12 +11,13 @@ requires-python = ">=3.9"
 dependencies = [
     # Required for parsing TOML in Python 3.9 and 3.10
     "tomli>=2.0.1; python_version < '3.11'",
-    "pytest>=7.0.0"
+    "pytest>=7.0.0",
+    "typer>=0.9.0"
 ]
 
 [project.scripts]
 # This exposes the CLI command to the user's terminal after installation
-modular-pytest-gen = "modular_pytest_gen.main:cli_entry"
+modular-pytest-gen = "modular_pytest_gen.cli.main:cli_entry"
 
 # Note: If you want to use modular-pytest-gen on its own codebase, 
 # you will eventually need to re-add [tool.modular_pytest_gen] here.
