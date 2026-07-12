@@ -20,12 +20,13 @@ class LayoutConfig:
         strategy (str): The placement strategy (e.g., 'adjacent', 'external').
         structure (str): The folder structure type (e.g., 'flat', 'nested').
         test_root (str): The directory name where tests are located if using external strategy.
+        granularity (str): Save tests as single script per function of combined per module ('function', 'module')
     """
 
     strategy: str = "external"
     structure: str = "nested"
     test_root: str = "tests"
-
+    granularity: str = "function"
 
 @dataclass
 class DiscoveryConfig:
@@ -127,6 +128,7 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
         strategy=layout_data.get("strategy", "external"),
         structure=layout_data.get("structure", "nested"),
         test_root=layout_data.get("test_root", "tests"),
+        granularity=layout_data.get("granularity", "function"),
     )
     discovery = DiscoveryConfig(
         respect_dunder_all=discovery_data.get("respect_dunder_all", True),

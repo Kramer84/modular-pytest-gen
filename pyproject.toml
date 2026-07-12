@@ -12,7 +12,8 @@ dependencies = [
     # Required for parsing TOML in Python 3.9 and 3.10
     "tomli>=2.0.1; python_version < '3.11'",
     "pytest>=7.0.0",
-    "typer>=0.9.0"
+    "typer>=0.9.0",
+    "libcst"
 ]
 
 [project.scripts]

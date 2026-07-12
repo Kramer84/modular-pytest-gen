@@ -110,7 +110,7 @@ class ModuleParser:
             },
         }
         for node in self.tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 immediate_names: Set[str] = set()
                 for child in ast.walk(node):
                     if isinstance(child, ast.Name):
@@ -174,48 +174,44 @@ class ModuleParser:
                         sibling_block = f"# Sibling dependency defined in this module:\n{internal_sibling_registry[name]}"
                         matched_free_code.add(sibling_block)
                 clean_node = deepcopy(node)
-                for arg in clean_node.args.args:
-                    arg.annotation = None
-                for arg in clean_node.args.kwonlyargs:
-                    arg.annotation = None
-                if clean_node.args.vararg:
-                    clean_node.args.vararg.annotation = None
-                if clean_node.args.kwarg:
-                    clean_node.args.kwarg.annotation = None
-                clean_node.returns = None
+                if isinstance(clean_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for arg in clean_node.args.args:
+                        arg.annotation = None
+                    for arg in clean_node.args.kwonlyargs:
+                        arg.annotation = None
+                    if clean_node.args.vararg:
+                        clean_node.args.vararg.annotation = None
+                    if clean_node.args.kwarg:
+                        clean_node.args.kwarg.annotation = None
+                    clean_node.returns = None
                 if clean_node.body and isinstance(clean_node.body[0], ast.Expr):
                     val = clean_node.body[0].value
                     if isinstance(val, ast.Constant) and isinstance(val.value, str):
                         clean_node.body.pop(0)
-                analysis["functions"].append(
-                    {
-                        "name": node.name,
-                        "signature": self._get_function_signature(node),
-                        "code": ast.unparse(clean_node),
-                        "docstring": ast.get_docstring(node),
-                        "external_imports": sorted(list(set(matched_imports))),
-                        "local_context_code": list(matched_free_code),
-                        "used_names": sorted(list(extended_used_names)),
-                    }
-                )
-            elif isinstance(node, ast.ClassDef):
-                class_info = {
+                target_metadata = {
                     "name": node.name,
-                    "bases": [ast.unparse(b) for b in node.bases],
-                    "code": ast.unparse(node),
+                    "signature": self._get_signature(node),
+                    "code": ast.unparse(clean_node),
                     "docstring": ast.get_docstring(node),
+                    "external_imports": sorted(list(set(matched_imports))),
+                    "local_context_code": list(matched_free_code),
+                    "used_names": sorted(list(extended_used_names))
                 }
-                is_exception = (
-                    "Error" in class_info["name"]
-                    or "Exception" in class_info["name"]
-                    or any(
-                        ("Error" in b or "Exception" in b for b in class_info["bases"])
+                if isinstance(node, ast.ClassDef):
+                    class_bases = [ast.unparse(b) for b in node.bases]
+                    is_exception = (
+                        "Error" in node.name or "Exception" in node.name or
+                        any("Error" in b or "Exception" in b for b in class_bases)
                     )
-                )
-                if is_exception:
-                    analysis["exceptions"].append(class_info)
+                    target_metadata["bases"] = class_bases
+                    
+                    if is_exception:
+                        analysis["exceptions"].append(target_metadata)
+                    else:
+                        analysis["classes"].append(target_metadata)
                 else:
-                    analysis["classes"].append(class_info)
+                    analysis["functions"].append(target_metadata)
+                
             elif isinstance(node, ast.Assign):
                 for target in node.targets:
                     if isinstance(target, ast.Name):
@@ -250,28 +246,37 @@ class ModuleParser:
         analysis["flags"]["profile"] = self._determine_profile(analysis)
         return analysis
 
-    def _get_function_signature(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    def _get_signature(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
     ) -> str:
-        """Generates a readable signature string for a function node.
+        """Generates a readable signature string for a function or class node.
 
         Includes decorators, function prefix (def/async def), arguments,
         and return type annotations.
 
         Args:
-            node (ast.FunctionDef | ast.AsyncFunctionDef): The function definition node.
+            node (ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef): The function or class definition node.
 
         Returns:
             str: A formatted string representing the function signature.
         """
         decorator_list = [f"@{ast.unparse(d)}" for d in node.decorator_list]
-        args = ast.unparse(node.args)
-        return_annotation = ""
-        if node.returns:
-            return_annotation = f" -> {ast.unparse(node.returns)}"
-        prefix = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
         decorators = f"{' '.join(decorator_list)}\n" if decorator_list else ""
-        return f"{decorators}{prefix} {node.name}({args}){return_annotation}:"
+        
+        if isinstance(node, ast.ClassDef):
+            bases = [ast.unparse(b) for b in node.bases]
+            base_str = f"({', '.join(bases)})" if bases else ""
+            return f"{decorators}class {node.name}{base_str}:"
+            
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            args = ast.unparse(node.args)
+            return_annotation = ""
+            if node.returns:
+                return_annotation = f" -> {ast.unparse(node.returns)}"
+            prefix = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
+            return f"{decorators}{prefix} {node.name}({args}){return_annotation}:"
+        
+        return ""
 
     def _is_main_boilerplate(self, node: ast.If) -> bool:
         """Determines if the provided If node is a main execution entry point.

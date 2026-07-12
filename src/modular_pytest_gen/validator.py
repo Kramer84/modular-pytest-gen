@@ -1,3 +1,4 @@
+import os
 import ast
 import json
 import re
@@ -44,6 +45,15 @@ class TestValidator:
         rel_module_path = target_file.relative_to(source_root).with_suffix("")
         func_tmp_dir = self.tmp_dir / rel_module_path / func_metadata["name"]
         func_tmp_dir.mkdir(parents=True, exist_ok=True)
+        prompt_log_path = func_tmp_dir / "initial_prompt_context.md"
+        prompt_log_content = (
+            f"# System Prompt\n\n```text\n{system_prompt}\n```\n\n"
+            f"# Initial User Prompt\n\n```text\n{user_prompt}\n```\n"
+        )
+        if tool_schema:
+            prompt_log_content += f"\n# Tool Schema\n\n```json\n{json.dumps(tool_schema, indent=2)}\n```\n"
+            
+        prompt_log_path.write_text(prompt_log_content, encoding="utf-8")
         current_user_prompt = user_prompt
         traceback_log = ""
         for attempt in range(1, max_retries + 1):
@@ -100,6 +110,9 @@ class TestValidator:
             executable_file = func_tmp_dir / f"attempt_{attempt}_runnable.py"
             executable_file.write_text(executable_script, encoding="utf-8")
             try:
+                env = os.environ.copy()
+                src_path_str = str(source_root.resolve())
+                env["PYTHONPATH"] = f"{src_path_str}{os.pathsep}{env.get('PYTHONPATH', '')}"
                 result = subprocess.run(
                     [
                         sys.executable,
@@ -111,6 +124,7 @@ class TestValidator:
                     capture_output=True,
                     text=True,
                     timeout=10.0,
+                    env=env
                 )
                 traceback_log = result.stdout if result.stdout else result.stderr
                 return_code = result.returncode
@@ -123,7 +137,7 @@ class TestValidator:
             (func_tmp_dir / f"attempt_{attempt}_pytest.log").write_text(
                 traceback_log, encoding="utf-8"
             )
-            if result.returncode == 0:
+            if return_code == 0:
                 print(
                     f"    [SUCCESS] Function '{func_metadata['name']}' verified successfully on attempt {attempt}."
                 )
@@ -131,10 +145,32 @@ class TestValidator:
                     executable_script, encoding="utf-8"
                 )
                 return executable_script
-            print(
-                f"    [WARN] Attempt {attempt} failed verification. Advancing feedback mapping loops..."
-            )
-            current_user_prompt = f"{user_prompt}\n\n⚠️ CRITICAL FAILURE SUMMARY:\nThe previous test implementation failed execution validation checks. \nReview the traceback below, correct syntax issues or assertion assumptions, and output a fresh, functional implementation block.\n\nDiagnostic Traceback Error Logs:\n```text\n{traceback_log}\n```    \n"
+            print(f"    [WARN] Attempt {attempt} failed verification. Advancing feedback mapping loops...")
+            
+            # --- The Chain-of-Thought Critic Prompt ---
+            current_user_prompt = f"""{user_prompt}
+
+CRITICAL FAILURE SUMMARY:
+The previous test implementation failed execution validation checks. 
+
+Diagnostic Traceback Error Logs:
+```text
+{traceback_log}
+
+```
+
+CRITIC PROTOCOL INITIATED:
+Before you write any code, you MUST write a brief root-cause analysis of the failure.
+Identify exactly which assumption in the previous test caused the error (e.g., 'The LLM assumed the matrix was 2D, but the function requires 3D', or 'The assertion used == on floats').
+
+Format your response exactly like this:
+
+[Your root-cause analysis here]
+
+
+[Then output the fixed Python/JSON implementation]
+"""
+
         print(
             f"    [FAIL] Exhausted all {max_retries} retries for '{func_metadata['name']}'."
         )

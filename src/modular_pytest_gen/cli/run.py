@@ -1,4 +1,6 @@
 import sys
+import ast
+import importlib
 from copy import deepcopy
 from pathlib import Path
 from typing import Annotated, Any, Dict, Optional
@@ -19,7 +21,7 @@ def gather_global_context(
     config: ProjectConfig, resolver: ImportResolver
 ) -> Dict[str, Any]:
     """Compiles constants and exceptions from specific files to feed the LLM."""
-    context = {"constants": {}, "exceptions": []}
+    context: Dict[str, Any] = {"constants": {}, "exceptions": []}
     for file_path in config.global_context:
         path = Path(file_path)
         if not path.exists():
@@ -49,6 +51,9 @@ def run_app(
             "--dry-run", help="Generate prompt Markdowns instead of calling the LLM"
         ),
     ] = False,
+    include_classes: Annotated[bool, typer.Option("--include-classes", help="Generate tests for classes as well as functions.")] = False,
+    max_class_lines: Annotated[int, typer.Option("--max-class-lines", help="Skip classes larger than this many lines.")] = 300,
+    force: Annotated[bool, typer.Option("--force", "-f", help="Force test generation even if verified tests already exist.")] = False,
     provider: Annotated[
         Optional[str], typer.Option(help="LLM Provider override")
     ] = None,
@@ -78,6 +83,14 @@ def run_app(
     resolver = ImportResolver(config.source_root, config.import_prefix)
     if verbose:
         typer.echo(f"[DEBUG] Resolver: {resolver}")
+    try:
+        if config.import_prefix:
+            importlib.import_module(config.import_prefix)
+            typer.echo(f"[OK] Successfully imported main module '{config.import_prefix}'.")
+    except ImportError:
+        typer.secho(f"\n[FATAL] Cannot import module '{config.import_prefix}'.", fg=typer.colors.RED)
+        typer.secho("Ensure your virtual environment is activated and the target package is installed (e.g., `pip install -e .`).", fg=typer.colors.YELLOW)
+        raise typer.Exit(code=1)
     is_structured = structured or config.llm.structured
     client = None
     if not dry_run:
@@ -104,7 +117,7 @@ def run_app(
         )
         raise typer.Exit(code=1)
     typer.echo("Building internal project metadata registry...")
-    project_wide_context = {"constants": {}, "exceptions": {}}
+    project_wide_context: Dict[str, Any] = {"constants": {}, "exceptions": {}}
     for py_file in source_root.rglob("*.py"):
         try:
             analysis = ModuleParser(py_file).parse()
@@ -134,42 +147,72 @@ def run_app(
             ]:
                 typer.echo("  -> Skipping: Static profile detected.")
                 continue
-            functions_to_test = module_analysis["functions"]
+            targets_to_test = module_analysis["functions"]
+            if include_classes:
+                for cls in module_analysis["classes"]:
+                    line_count = len(cls["code"].splitlines())
+                    if line_count <= max_class_lines:
+                        targets_to_test.append(cls)
+                    else:
+                        typer.echo(f"  -> Skipping class: {cls['name']} ({line_count} lines exceeds max {max_class_lines})")
+            
             if (
                 config.discovery.respect_dunder_all
                 and module_analysis["flags"]["has_dunder_all"]
             ):
                 valid_names = set(module_analysis["dunder_all"])
-                functions_to_test = [
-                    f for f in functions_to_test if f["name"] in valid_names
+                targets_to_test = [
+                    f for f in targets_to_test if f["name"] in valid_names
                 ]
-            if not functions_to_test:
+            if not targets_to_test:
                 continue
-            for func in functions_to_test:
-                if func["name"] in config.discovery.exclude_functions:
-                    typer.echo(f"  -> Skipping function: {func['name']} (Blacklisted)")
+            for target in targets_to_test:
+                if target["name"] in config.discovery.exclude_functions:
+                    typer.echo(f"  -> Skipping target: {target['name']} (Blacklisted)")
                     continue
-                typer.echo(f"  -> Processing: {func['name']}")
+                if not force:
+                    # 1. Check Temporary Directory
+                    rel_module_path = target_file.relative_to(source_root).with_suffix("")
+                    func_tmp_dir = Path(f"{config.layout.test_root}.tmp") / rel_module_path / target["name"]
+                    is_verified_in_tmp = func_tmp_dir.exists() and any(func_tmp_dir.glob("*_verified.py"))
+                    
+                    # 2. Check Final Merged Suite
+                    is_verified_in_final = False
+                    final_test_file = layout.get_test_file_path(target_file)
+                    if final_test_file.exists():
+                        try:
+                            tree = ast.parse(final_test_file.read_text(encoding="utf-8"))
+                            existing_funcs = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
+                            # Check if any existing test function name contains the target's name
+                            if any(target["name"] in f for f in existing_funcs if f.startswith("test_")):
+                                is_verified_in_final = True
+                        except Exception:
+                            pass # Safely ignore unparseable test files
+                            
+                    if is_verified_in_tmp or is_verified_in_final:
+                        typer.echo(f"  -> Skipping target: {target['name']} (Already verified)")
+                        continue
+                typer.echo(f"  -> Processing: {target['name']}")
                 try:
                     logical_import_path = resolver.get_import_path(
-                        target_file, func["name"]
+                        target_file, target["name"]
                     )
                 except ValueError:
-                    logical_import_path = func["name"]
+                    logical_import_path = target["name"]
                 module_logical_path = ".".join(logical_import_path.split(".")[:-1])
                 if module_logical_path:
                     function_import_statement = (
-                        f"from {module_logical_path} import {func['name']}"
+                        f"from {module_logical_path} import {target['name']}"
                     )
                 else:
-                    function_import_statement = f"import {func['name']}"
+                    function_import_statement = f"import {target['name']}"
                 import_statement = (
-                    "\n".join(func["external_imports"])
-                    if func.get("external_imports")
+                    "\n".join(target["external_imports"])
+                    if target.get("external_imports")
                     else ""
                 )
-                targeted_global_context = {"constants": {}, "exceptions": []}
-                for name in func.get("used_names", []):
+                targeted_global_context: Dict[str, Any] = {"constants": {}, "exceptions": []}
+                for name in target.get("used_names", []):
                     if name in project_wide_context["constants"]:
                         targeted_global_context["constants"][name] = (
                             project_wide_context["constants"][name]
@@ -187,7 +230,7 @@ def run_app(
                     targeted_global_context, logical_import_path
                 )
                 user_prompt = prompter.build_user_prompt(
-                    func,
+                    target,
                     function_import_statement,
                     import_statement,
                     custom_instructions=config.custom_instructions,
@@ -196,7 +239,7 @@ def run_app(
                 if dry_run:
                     dry_dir = Path("dry_run_prompts")
                     dry_dir.mkdir(exist_ok=True)
-                    md_path = dry_dir / f"{target_file.stem}_{func['name']}.md"
+                    md_path = dry_dir / f"{target_file.stem}_{target['name']}.md"
                     with open(md_path, "w", encoding="utf-8") as f:
                         f.write(f"# System Prompt\n\n```text\n{system_prompt}\n```\n\n")
                         f.write(f"# User Prompt\n\n```text\n{user_prompt}\n```\n\n")
@@ -211,7 +254,7 @@ def run_app(
                 validator.validate_and_heal(
                     target_file=target_file,
                     source_root=source_root,
-                    func_metadata=func,
+                    func_metadata=target,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     import_statement=import_statement,
@@ -222,8 +265,8 @@ def run_app(
         if not dry_run and merge_tests:
             typer.echo("\n==============================================")
             typer.echo("Beginning final test suite script consolidation pass...")
-            merger = TestMerger(tmp_dir=f"{config.layout.test_root}.tmp")
-            merger.merge_all(final_test_root=config.layout.test_root)
+            merger = TestMerger(config=config, layout_manager=layout)
+            merger.merge_all()
     except KeyboardInterrupt:
         typer.secho(
             "\n[PROCESS] Execution halted by user command interrupt request (Ctrl+C).",

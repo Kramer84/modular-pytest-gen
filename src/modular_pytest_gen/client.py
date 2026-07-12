@@ -26,12 +26,14 @@ class BaseLLMClient(abc.ABC):
 
     def _extract_from_tool(self, tool_calls: list) -> str:
         """Extracts the raw JSON arguments payload from a structured tool call."""
+        if not tool_calls:  # Guard against NoneType from unstable API responses
+            return ""
+        
         for call in tool_calls:
-            if call.get("function", {}).get("name") == "write_pytest_suite":
-                args = call["function"].get("arguments", "")
-                if isinstance(args, dict):
-                    return json.dumps(args)
-                return str(args).strip()
+            args = call["function"].get("arguments", "")
+            if isinstance(args, dict):
+                return json.dumps(args)
+            return str(args).strip()
         return ""
 
     def _extract_from_markdown(self, text: str) -> str:
