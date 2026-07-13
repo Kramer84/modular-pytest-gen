@@ -1,7 +1,97 @@
-"""
-modular_pytest_gen
-------------------
-A tool for parsing python modules and generating pytest files.
-"""
-
 __version__ = "0.1.0"
+from .analyzer import TestRegistryAnalyzer
+from .client import BaseLLMClient, MistralClient, OllamaClient, unload_ollama_model
+from .config import DiscoveryConfig, LayoutConfig, LLMConfig, ProjectConfig, load_config
+from .docstring import (
+    BeartypeMeta,
+    DeprecationDetail,
+    NumpyDocstringSchema,
+    ParameterDetail,
+    ReturnDetail,
+    SeeAlsoItem,
+    build_numpy_docstring,
+    smart_wrap,
+)
+from .graph import DependencyGraph
+from .injector import (
+    AutodocInjector,
+    inject_autodoc,
+    inject_imports_safely,
+    sanitize_imports,
+)
+from .layout import LayoutManager
+from .merge import TestMerger
+from .parser import ModuleParser
+from .prompter import PromptBuilder
+from .resolver import ImportResolver
+from .templates import (
+    AUTODOC_GENERATE_USER,
+    AUTODOC_SYSTEM_PROMPT,
+    AUTODOC_VERIFY_USER,
+    BEARTYPE_STYLE_GUIDE,
+    CUSTOM_EXCEPTIONS_HEADER,
+    ENVIRONMENT_CONTEXT_HEADER,
+    GLOBAL_CONSTANTS_HEADER,
+    NUMPY_STYLE_GUIDE,
+    SYSTEM_PROMPT_STANDARD,
+    SYSTEM_PROMPT_STRUCTURED,
+    USER_PROMPT_BASE,
+    USER_PROMPT_DIRECTIVES,
+    USER_PROMPT_DOCSTRING,
+    USER_PROMPT_FOOTER,
+    USER_PROMPT_HEADER,
+    USER_PROMPT_IMPORTS,
+    USER_PROMPT_LOCAL_CONTEXT,
+    USER_PROMPT_SIGNATURE,
+)
+from .validator import TestValidator
+
+__all__ = [
+    "TestRegistryAnalyzer",
+    "BaseLLMClient",
+    "MistralClient",
+    "OllamaClient",
+    "unload_ollama_model",
+    "DiscoveryConfig",
+    "LayoutConfig",
+    "LLMConfig",
+    "ProjectConfig",
+    "load_config",
+    "BeartypeMeta",
+    "DeprecationDetail",
+    "NumpyDocstringSchema",
+    "ParameterDetail",
+    "ReturnDetail",
+    "SeeAlsoItem",
+    "build_numpy_docstring",
+    "smart_wrap",
+    "DependencyGraph",
+    "AutodocInjector",
+    "inject_autodoc",
+    "inject_imports_safely",
+    "sanitize_imports",
+    "LayoutManager",
+    "TestMerger",
+    "ModuleParser",
+    "PromptBuilder",
+    "ImportResolver",
+    "AUTODOC_GENERATE_USER",
+    "AUTODOC_SYSTEM_PROMPT",
+    "AUTODOC_VERIFY_USER",
+    "BEARTYPE_STYLE_GUIDE",
+    "CUSTOM_EXCEPTIONS_HEADER",
+    "ENVIRONMENT_CONTEXT_HEADER",
+    "GLOBAL_CONSTANTS_HEADER",
+    "NUMPY_STYLE_GUIDE",
+    "SYSTEM_PROMPT_STANDARD",
+    "SYSTEM_PROMPT_STRUCTURED",
+    "USER_PROMPT_BASE",
+    "USER_PROMPT_DIRECTIVES",
+    "USER_PROMPT_DOCSTRING",
+    "USER_PROMPT_FOOTER",
+    "USER_PROMPT_HEADER",
+    "USER_PROMPT_IMPORTS",
+    "USER_PROMPT_LOCAL_CONTEXT",
+    "USER_PROMPT_SIGNATURE",
+    "TestValidator",
+]

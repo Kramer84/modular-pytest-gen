@@ -1,11 +1,21 @@
 import ast
 import importlib
-import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Annotated, Any, Dict, Optional
+from typing import Any, Dict, Optional
 
 import typer
+from modular_pytest_gen.clients import MistralClient, OllamaClient
+from modular_pytest_gen.merging import TestMerger
+from modular_pytest_gen.parsing import ModuleParser
+from modular_pytest_gen.prompts import PromptBuilder
+from modular_pytest_gen.resolving import ImportResolver
+from modular_pytest_gen.utils import unload_ollama_model
+from modular_pytest_gen.validation import TestValidator
+
+from modular_pytest_gen.cli.run import gather_global_context
+from modular_pytest_gen.config import load_config
+from modular_pytest_gen.layout import LayoutManager
 
 from ..client import MistralClient, OllamaClient, unload_ollama_model
 from ..config import ProjectConfig, load_config
@@ -20,6 +30,34 @@ from ..validator import TestValidator
 def gather_global_context(
     config: ProjectConfig, resolver: ImportResolver
 ) -> Dict[str, Any]:
+    r"""
+    Collects global constants and exceptions from specified files.
+    
+    This function aggregates constants and exceptions from files listed in
+    the project configuration. It resolves their import paths using the
+    provided resolver and handles missing files gracefully.
+    
+    Parameters
+    ----------
+    config : ProjectConfig
+        The project configuration containing paths to global context files.
+    resolver : ImportResolver
+        The import resolver used to determine the import paths of
+        exceptions.
+    
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing two keys:
+    
+        - `constants`: A dictionary mapping constant names to their values.
+        - `exceptions`: A list of dictionaries containing exception
+          information, including their import paths.
+    
+    Warnings
+    --------
+    Emits a warning if a specified global context file is not found.
+    """
     context: Dict[str, Any] = {"constants": {}, "exceptions": []}
     for file_path in config.global_context:
         path = Path(file_path)
@@ -41,53 +79,53 @@ def gather_global_context(
 
 
 def run_app(
-    config_path: Annotated[
-        str, typer.Option("--config", "-c", help="Path to config file")
-    ] = "autotest.toml",
-    dry_run: Annotated[
-        bool,
-        typer.Option(
-            "--dry-run", help="Generate prompt Markdowns instead of calling the LLM"
-        ),
-    ] = False,
-    include_classes: Annotated[
-        bool,
-        typer.Option(
-            "--include-classes", help="Generate tests for classes as well as functions."
-        ),
-    ] = False,
-    max_class_lines: Annotated[
-        int,
-        typer.Option(
-            "--max-class-lines", help="Skip classes larger than this many lines."
-        ),
-    ] = 300,
-    force: Annotated[
-        bool,
-        typer.Option(
-            "--force",
-            "-f",
-            help="Force test generation even if verified tests already exist.",
-        ),
-    ] = False,
-    provider: Annotated[
-        Optional[str], typer.Option(help="LLM Provider override")
-    ] = None,
-    model: Annotated[Optional[str], typer.Option(help="Model tag override")] = None,
-    structured: Annotated[
-        bool, typer.Option(help="Force Tool/JSON output mode override")
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output for debugging"),
-    ] = False,
-    merge_tests: Annotated[
-        bool,
-        typer.Option(
-            "--merge-tests", "-m", help="Merge generated test files into a single suite"
-        ),
-    ] = False,
-):
+    config_path: str = 'autotest.toml', dry_run: bool = False, include_classes: bool = False, max_class_lines: int = 300, force: bool = False, provider: Optional[str] = None, model: Optional[str] = None, structured: bool = False, verbose: bool = False, merge_tests: bool = False):
+    r"""
+    Execute the modular pytest and docstring generation pipeline
+    
+    This function orchestrates the complete workflow for generating pytest
+    suites and context-aware docstrings. It handles configuration loading,
+    LLM client initialization, and the core test generation process.
+    
+    Parameters
+    ----------
+    config_path : str, optional (default is 'autotest.toml')
+        Path to the configuration file
+    dry_run : bool, optional (default is False)
+        Flag to generate prompt Markdowns instead of calling the LLM
+    include_classes : bool, optional (default is False)
+        Flag to generate tests for classes as well as functions
+    max_class_lines : int, optional (default is 300)
+        Skip classes larger than this many lines
+    force : bool, optional (default is False)
+        Force test generation even if verified tests already exist
+    provider : Optional[str], optional (default is None)
+        LLM Provider override
+    model : Optional[str], optional (default is None)
+        Model tag override
+    structured : bool, optional (default is False)
+        Force Tool/JSON output mode override
+    verbose : bool, optional (default is False)
+        Enable verbose output for debugging
+    merge_tests : bool, optional (default is False)
+        Merge generated test files into a single suite
+    
+    Raises
+    ------
+    Exception
+        Configuration error during loading
+    
+        Client initialization failure
+    
+    Warnings
+    --------
+    Emits a warning if a specified global context file is not found
+    
+    See Also
+    --------
+    modular_pytest_gen.cli.run.gather_global_context :
+        Collects global constants and exceptions from specified files
+    """
     try:
         config = load_config(config_path)
     except Exception as e:

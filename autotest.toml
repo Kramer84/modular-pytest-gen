@@ -1,0 +1,27 @@
+# autotest.toml - Modular Pytest Gen Configuration
+
+source_root = "src"
+import_prefix = "modular_pytest_gen"
+global_context = []
+custom_instructions = ""
+
+[layout]
+strategy = "external" 
+structure = "nested"  
+test_root = "tests"
+
+[discovery]
+respect_dunder_all = true
+exclude_patterns = [
+    "*__init__.py",
+    "build",
+    "tests",
+    "*test_*.py"
+]
+exclude_functions = []
+
+[llm]
+provider = "mistral"
+model = "codestral-latest"
+host = "https://api.mistral.ai" 
+structured = false

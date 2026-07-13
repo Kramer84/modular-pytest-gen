@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from typing_extensions import Annotated
 
 from ..config import load_config
 from ..layout import LayoutManager
@@ -9,26 +10,33 @@ from ..merge import TestMerger
 
 
 def merge_app(
-    config_path: Annotated[
-        str, typer.Option("--config", "-c", help="Path to config file")
-    ] = "autotest.toml",
-    tmp_dir: Annotated[
-        Optional[str],
-        typer.Option(
-            "--tmp-dir",
-            "-t",
-            help="Directory containing temporary test files. Overrides config.",
-        ),
-    ] = None,
-    output_dir: Annotated[
-        Optional[str],
-        typer.Option(
-            "--output-dir",
-            "-o",
-            help="Final directory to output merged tests. Overrides config.",
-        ),
-    ] = None,
-):
+    config_path: Annotated[str, typer.Option('--config', '-c', help='Path to config file')]='autotest.toml', tmp_dir: Annotated[Optional[str], typer.Option('--tmp-dir', '-t', help='Directory containing temporary test files. Overrides config.')]=None, output_dir: Annotated[Optional[str], typer.Option('--output-dir', '-o', help='Final directory to output merged tests. Overrides config.')]=None):
+    r"""
+    Merge test files from temporary directory to final output directory.
+    
+    This function orchestrates the merging of test files from a temporary
+    directory to a final output directory. It handles configuration
+    loading, directory validation, and the actual merging process.
+    
+    Parameters
+    ----------
+    config_path : str, optional (default is 'autotest.toml')
+        Path to the configuration file.
+    tmp_dir : Optional[str], optional (default is None)
+        Directory containing temporary test files. Overrides config if
+        provided.
+    output_dir : Optional[str], optional (default is None)
+        Final directory to output merged tests. Overrides config if
+        provided.
+    
+    Raises
+    ------
+    typer.Exit : typer.Exit
+        - Raised when configuration loading fails.
+        - Raised when the temporary directory does not exist or is not a
+          directory.
+        - Raised when the merge process fails.
+    """
     try:
         config = load_config(config_path)
         layout = LayoutManager(config)

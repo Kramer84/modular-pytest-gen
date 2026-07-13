@@ -2,12 +2,12 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Annotated, Any, Dict, Optional
+from typing import Any, Dict
 
 import typer
 
 from .. import templates
-from ..client import BaseLLMClient, MistralClient, OllamaClient
+from ..client import MistralClient, OllamaClient
 from ..config import load_config
 from ..docstring import NumpyDocstringSchema, build_numpy_docstring
 from ..graph import DependencyGraph
@@ -17,6 +17,20 @@ from ..resolver import ImportResolver
 
 
 def get_autodoc_tool_schema() -> dict:
+    r"""
+    Retrieve the JSON schema for the autodoc tool
+    
+    This function returns the JSON schema that defines the structure and
+    validation rules for the autodoc tool's parameters. The schema is used
+    to ensure that the parameters provided to the autodoc tool are valid
+    and correctly formatted.
+    
+    Returns
+    -------
+    dict
+        The JSON schema for the autodoc tool, which includes the type,
+        function name, description, and parameters schema.
+    """
     if hasattr(NumpyDocstringSchema, "model_json_schema"):
         parameters_schema = NumpyDocstringSchema.model_json_schema()
     else:
@@ -32,47 +46,64 @@ def get_autodoc_tool_schema() -> dict:
 
 
 def autodoc_app(
-    config_path: Annotated[
-        str, typer.Option("--config", "-c", help="Path to config file")
-    ] = "autotest.toml",
-    mode: Annotated[
-        str,
-        typer.Option(
-            "--mode",
-            "-m",
-            help="'generate' (missing docstrings) or 'verify' (correct existing docstrings).",
-        ),
-    ] = "generate",
-    examples: Annotated[
-        bool,
-        typer.Option("--examples", help="Force the LLM to generate an Examples block."),
-    ] = False,
-    dry_run: Annotated[
-        bool,
-        typer.Option(
-            "--dry-run", help="Generate prompt Markdowns without calling the LLM."
-        ),
-    ] = False,
-    output_dir: Annotated[
-        str,
-        typer.Option(
-            "--output-dir",
-            "-o",
-            help="Directory to stage modified files for manual verification instead of overwriting in-place.",
-        ),
-    ] = "",
-    provider: Annotated[str, typer.Option(help="LLM Provider override")] = "",
-    model: Annotated[str, typer.Option(help="Model tag override")] = "",
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable verbose debug logging.")
-    ] = False,
-    title_model: Annotated[
-        str,
-        typer.Option(
-            "--title-model", help="Secondary local model to strictly compress titles."
-        ),
-    ] = "llama3.1:8B",
-):
+    config_path: str = 'autotest.toml', mode: str = 'generate', examples: bool = False, dry_run: bool = False, output_dir: str = '', provider: str = '', model: str = '', verbose: bool = False, title_model: str = 'llama3.1:8B') -> None:
+    r"""
+    Generate docstrings from llm prompts
+    
+    This function orchestrates the automated docstring generation process
+    by building dependency graphs, constructing context-aware prompts, and
+    injecting the generated docstrings back into the source code. It
+    supports both generation of new docstrings and verification of existing
+    ones.
+    
+    Parameters
+    ----------
+    config_path : str, optional (default is 'autotest.toml')
+        Path to the configuration file
+    mode : {"'generate'", "'verify'"}, optional (default is 'generate')
+        Operation mode
+    examples : bool, optional (default is False)
+        Flag to force generation of examples block
+    dry_run : bool, optional (default is False)
+        Flag to generate prompts without calling LLM
+    output_dir : str, optional (default is '')
+        Directory to stage modified files
+    provider : str, optional (default is '')
+        LLM provider override
+    model : str, optional (default is '')
+        Model tag override
+    verbose : bool, optional (default is False)
+        Enable verbose debug logging
+    title_model : str, optional (default is 'llama3.1:8B')
+        Secondary local model for title compression
+    
+    Returns
+    -------
+    None
+        Generate and inject context-aware docstrings into Python functions
+        based on the provided configuration and mode.
+    
+    Raises
+    ------
+    typer.Exit : typer.Exit
+        If the mode is invalid or if there's a configuration error.
+    
+    See Also
+    --------
+    modular_pytest_gen.cli.autodoc.get_autodoc_tool_schema :
+        Retrieves the JSON schema for the autodoc tool.
+    
+    Notes
+    -----
+    The function processes functions in a bottom-up order based on their
+    dependencies to ensure accurate context generation.
+    
+    In dry-run mode, the function generates prompt Markdown files without
+    calling the LLM.
+    
+    The function supports both generation of new docstrings and
+    verification of existing ones based on the mode parameter.
+    """
     if mode not in ["generate", "verify"]:
         typer.secho("Mode must be 'generate' or 'verify'.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -281,7 +312,23 @@ def autodoc_app(
                                     fg=typer.colors.YELLOW,
                                 )
                                 break
-
+            updated_signature = payload.get("updated_signature", "")
+            required_imports = payload.get("required_imports", [])
+            updated_signature = re.sub(
+                "^\\s*```(?:python)?\\n?", "", updated_signature, flags=re.IGNORECASE
+            )
+            updated_signature = re.sub("\\n?\\s*```\\s*$", "", updated_signature)
+            updated_signature = updated_signature.strip("` \n")
+            clean_imports = []
+            for imp in required_imports:
+                imp = re.sub("^\\s*```(?:python)?\\n?", "", imp, flags=re.IGNORECASE)
+                imp = re.sub("\\n?\\s*```\\s*$", "", imp)
+                imp = imp.strip("` \n")
+                if imp:
+                    clean_imports.extend(
+                        [i.strip() for i in imp.splitlines() if i.strip()]
+                    )
+            required_imports = clean_imports
             if output_dir:
                 out_dir_path = Path(output_dir).resolve()
                 rel_path = file_path.relative_to(source_root)
@@ -309,6 +356,14 @@ def autodoc_app(
                     fg=typer.colors.MAGENTA,
                 )
                 typer.secho(
+                    f"[DEBUG] updated_signature: {repr(updated_signature)}",
+                    fg=typer.colors.MAGENTA,
+                )
+                typer.secho(
+                    f"[DEBUG] required_imports: {repr(required_imports)}",
+                    fg=typer.colors.MAGENTA,
+                )
+                typer.secho(
                     f"[DEBUG] new_docstring (repr): {repr(new_docstring)}",
                     fg=typer.colors.MAGENTA,
                 )
@@ -320,6 +375,8 @@ def autodoc_app(
                 source_code,
                 target["name"],
                 new_docstring,
+                updated_signature,
+                required_imports,
             )
             write_path.write_text(modified_source, encoding="utf-8")
             try:

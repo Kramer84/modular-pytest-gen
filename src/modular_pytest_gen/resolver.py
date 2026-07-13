@@ -4,12 +4,6 @@ from typing import Any, Dict, Set, Union
 
 
 class ImportResolver:
-    """Resolves physical file paths to logical Python module import paths.
-
-    Utilizes a two-pass AST inspection architecture to handle complex package
-    re-exports, module aliasing, and wildcard star imports securely.
-    """
-
     def __init__(self, source_root: Union[str, Path], import_prefix: str):
         self.source_root = Path(source_root).resolve()
         self.import_prefix = import_prefix
@@ -22,7 +16,6 @@ class ImportResolver:
         return f"ImportResolver(source_root={self.source_root!r}, import_prefix={self.import_prefix!r}, files_mapped={len(self.physical_to_logical)}, aliases_found={len(self.public_aliases)})"
 
     def _get_file_definitions(self, file_path: Path) -> Set[str]:
-        """Performs a shallow AST scan to catalog top-level defined entities."""
         definitions: Set[str] = set()
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"))

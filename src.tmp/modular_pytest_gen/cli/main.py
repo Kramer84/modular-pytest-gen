@@ -30,7 +30,18 @@ app.command(
 )(autodoc_app)
 
 
-def cli_entry():
+def cli_entry() -> None:
+    r"""
+    Execute the command-line interface entry point
+    
+    This function serves as the primary entry point for the command-line
+    interface, triggering the application's main execution flow.
+    
+    Returns
+    -------
+    None
+        This function does not return any value.
+    """
     app()
 
 

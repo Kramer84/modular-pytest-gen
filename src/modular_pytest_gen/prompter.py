@@ -5,25 +5,12 @@ from . import templates
 
 
 class PromptBuilder:
-    """
-    Constructs contextual LLM prompts for generating pytest suites.
-    Agnostic to path resolution—relies on the caller to provide exact paths.
-    """
-
     def __init__(self, structured_output: bool = False):
-        """
-        Args:
-            structured_output: If True, formats the system prompt to expect Tool/JSON calling.
-        """
         self.structured_output = structured_output
 
     def build_system_prompt(
         self, global_context: Dict[str, Any], fully_qualified_path: str
     ) -> str:
-        """
-        Constructs the high-level system prompt, injecting parsed definitions
-        of custom exceptions and global constants.
-        """
         template = (
             templates.SYSTEM_PROMPT_STRUCTURED
             if self.structured_output
@@ -63,9 +50,6 @@ class PromptBuilder:
         import_statement: str,
         custom_instructions: str = "",
     ) -> str:
-        """
-        Constructs the unique prompt payload for an individual function targeted for testing.
-        """
         user_prompt = templates.USER_PROMPT_HEADER + "\n"
         user_prompt += templates.USER_PROMPT_IMPORTS.format(
             import_statement=import_statement,
@@ -95,10 +79,6 @@ class PromptBuilder:
         return user_prompt
 
     def get_tool_schema(self) -> Dict[str, Any]:
-        """
-        Returns a structured schema optimized for headless generation
-        and easy downstream test script merging.
-        """
         return {
             "type": "function",
             "function": {

@@ -139,6 +139,23 @@ class MistralClient(BaseLLMClient):
 
 
 def unload_ollama_model(model_name: str):
+    r"""
+    Unload a running Ollama model instance.
+    
+    This function stops a specified Ollama model instance by executing the
+    system command to stop the model process. It handles potential errors
+    during the unloading process.
+    
+    Parameters
+    ----------
+    model_name : str
+        The name of the Ollama model to be unloaded.
+    
+    Raises
+    ------
+    Exception : Exception
+        The exception raised if the model unloading process fails.
+    """
     print(
         f"\n[CLEANUP] Stopping Ollama model context framework execution for: {model_name}"
     )

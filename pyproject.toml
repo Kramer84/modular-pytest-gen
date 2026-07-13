@@ -13,8 +13,12 @@ dependencies = [
     "tomli>=2.0.1; python_version < '3.11'",
     "pytest>=7.0.0",
     "typer>=0.9.0",
-    "libcst"
+    "libcst",
+    "pydantic"
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [project.scripts]
 # This exposes the CLI command to the user's terminal after installation

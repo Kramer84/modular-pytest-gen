@@ -48,7 +48,37 @@ class ProjectConfig:
     llm: LLMConfig = field(default_factory=LLMConfig)
 
 
-def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
+def load_config(config_path: Path | str = 'autotest.toml') -> ProjectConfig:
+    r"""
+    Load project configuration from a TOML file.
+    
+    Parses a TOML configuration file to extract project settings, including
+    layout preferences, discovery rules, and LLM configurations. Returns a
+    structured ProjectConfig object with default values if the file is
+    missing or invalid.
+    
+    Parameters
+    ----------
+    config_path : Path | str, optional (default is 'autotest.toml')
+        Path to the TOML configuration file.
+    
+    Returns
+    -------
+    ProjectConfig
+        Returns a ProjectConfig object populated with settings from the
+        TOML file.
+    
+        If the file does not exist or is invalid, returns a default
+        ProjectConfig object.
+    
+    Raises
+    ------
+    ImportError : ImportError
+        Raised if the 'tomli' library is required but not available on
+        Python versions below 3.11.
+    ValueError : ValueError
+        Raised if the TOML file exists but cannot be parsed.
+    """
     if tomllib is None:
         raise ImportError(
             "The 'tomli' library is required to parse TOML files on Python < 3.11."

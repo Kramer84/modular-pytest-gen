@@ -1,6 +1,5 @@
 import shutil
 from pathlib import Path
-from typing import Annotated
 
 import typer
 
@@ -8,13 +7,27 @@ from ..config import load_config
 
 
 def clean_app(
-    config_path: Annotated[
-        str, typer.Option("--config", "-c", help="Path to config file")
-    ] = "autotest.toml",
-    dry_run_dir: Annotated[
-        str, typer.Option("--dry-run-dir", help="Directory containing dry run prompts")
-    ] = "dry_run_prompts",
-):
+    config_path: str = 'autotest.toml', dry_run_dir: str = 'dry_run_prompts') -> None:
+    r"""
+    Remove temporary files and directories from the application workspace.
+    
+    This function cleans up the workspace by removing temporary test
+    registry and dry run prompt directories. It uses the configuration file
+    to determine the location of the temporary directory and provides
+    feedback on the cleanup process.
+    
+    Parameters
+    ----------
+    config_path : str, optional (default is 'autotest.toml')
+        Path to the configuration file.
+    dry_run_dir : str, optional (default is 'dry_run_prompts')
+        Directory containing dry run prompts.
+    
+    Raises
+    ------
+    typer.Exit : typer.Exit
+        Raised if there is an error loading the configuration file.
+    """
     try:
         config = load_config(config_path)
     except Exception as e:
