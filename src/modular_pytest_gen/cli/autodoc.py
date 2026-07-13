@@ -281,7 +281,6 @@ def autodoc_app(
                                     fg=typer.colors.YELLOW,
                                 )
                                 break
-
             if output_dir:
                 out_dir_path = Path(output_dir).resolve()
                 rel_path = file_path.relative_to(source_root)
@@ -316,29 +315,8 @@ def autodoc_app(
                     "[DEBUG] --------------------------------------\n",
                     fg=typer.colors.MAGENTA,
                 )
-            modified_source = inject_autodoc(
-                source_code,
-                target["name"],
-                new_docstring,
-            )
+            modified_source = inject_autodoc(source_code, target["name"], new_docstring)
             write_path.write_text(modified_source, encoding="utf-8")
-            try:
-                subprocess.run(
-                    [
-                        "python",
-                        "-m",
-                        "ruff",
-                        "check",
-                        str(write_path),
-                        "--fix",
-                        "--select",
-                        "F401,F811,I",
-                    ],
-                    capture_output=True,
-                    check=False,
-                )
-            except Exception:
-                pass
             generated_docstrings_cache[node_path] = new_docstring
             typer.secho(
                 f"     [INJECTED & CLEANED] Successfully wrote to {write_path.name}",

@@ -3,7 +3,6 @@ from .analyzer import TestRegistryAnalyzer
 from .client import BaseLLMClient, MistralClient, OllamaClient, unload_ollama_model
 from .config import DiscoveryConfig, LayoutConfig, LLMConfig, ProjectConfig, load_config
 from .docstring import (
-    BeartypeMeta,
     DeprecationDetail,
     NumpyDocstringSchema,
     ParameterDetail,
@@ -16,8 +15,6 @@ from .graph import DependencyGraph
 from .injector import (
     AutodocInjector,
     inject_autodoc,
-    inject_imports_safely,
-    sanitize_imports,
 )
 from .layout import LayoutManager
 from .merge import TestMerger
@@ -28,7 +25,6 @@ from .templates import (
     AUTODOC_GENERATE_USER,
     AUTODOC_SYSTEM_PROMPT,
     AUTODOC_VERIFY_USER,
-    BEARTYPE_STYLE_GUIDE,
     CUSTOM_EXCEPTIONS_HEADER,
     ENVIRONMENT_CONTEXT_HEADER,
     GLOBAL_CONSTANTS_HEADER,
@@ -68,8 +64,6 @@ __all__ = [
     "DependencyGraph",
     "AutodocInjector",
     "inject_autodoc",
-    "inject_imports_safely",
-    "sanitize_imports",
     "LayoutManager",
     "TestMerger",
     "ModuleParser",
@@ -78,7 +72,6 @@ __all__ = [
     "AUTODOC_GENERATE_USER",
     "AUTODOC_SYSTEM_PROMPT",
     "AUTODOC_VERIFY_USER",
-    "BEARTYPE_STYLE_GUIDE",
     "CUSTOM_EXCEPTIONS_HEADER",
     "ENVIRONMENT_CONTEXT_HEADER",
     "GLOBAL_CONSTANTS_HEADER",

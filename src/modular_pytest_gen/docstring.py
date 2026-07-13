@@ -1,27 +1,8 @@
 import re
 import textwrap
-from typing import Dict, List, Literal, Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
-
-
-class BeartypeMeta(BaseModel):
-    raw_hint: str = Field(
-        description="The string representation of the type hint (e.g., 'list[str]')."
-    )
-    category: Literal[
-        "builtin",
-        "pep585_collection",
-        "pep604_union",
-        "literal",
-        "forward_ref",
-        "validator",
-    ] = "builtin"
-    validator_expression: Optional[str] = Field(
-        None,
-        description="The lambda or expression if using beartype.vale (e.g., 'Is[lambda x: x > 0]').",
-    )
-
 
 class DeprecationDetail(BaseModel):
     version: str = Field(
@@ -34,7 +15,7 @@ class DeprecationDetail(BaseModel):
 
 class ParameterDetail(BaseModel):
     name: str
-    beartype_type: BeartypeMeta
+    type_hint: str = Field(description="The string representation of the type hint (e.g., 'list[str]' or 'int').")
     description: str
     is_optional: bool = False
     default_value: Optional[str] = None
@@ -43,12 +24,11 @@ class ParameterDetail(BaseModel):
         description="Allowed values, mapping to Literal or NumPy set notation. Default value first.",
     )
 
-
 class ReturnDetail(BaseModel):
     name: Optional[str] = Field(
         None, description="Optionally named return values allowed."
     )
-    beartype_type: BeartypeMeta
+    type_hint: str = Field(description="The string representation of the type hint.")
     description: List[str] = Field(
         description="List of strings. Use separate items for different paragraphs or bullet points."
     )
@@ -177,7 +157,7 @@ def build_numpy_docstring(
             if p.choices:
                 type_str = f"{{{', '.join((repr(c) for c in p.choices))}}}"
             else:
-                type_str = p.beartype_type.raw_hint
+                type_str = p.type_hint
             if p.is_optional:
                 type_str += ", optional"
             if p.default_value is not None:
@@ -191,9 +171,9 @@ def build_numpy_docstring(
         block_lines = []
         for r in returns_list:
             if r.name:
-                block_lines.append(f"{r.name} : {r.beartype_type.raw_hint}")
+                block_lines.append(f"{r.name} : {r.type_hint}")
             else:
-                block_lines.append(r.beartype_type.raw_hint)
+                block_lines.append(r.type_hint)
             block_lines.extend(smart_wrap(r.description, desc_wrapper))
         return block_lines
 

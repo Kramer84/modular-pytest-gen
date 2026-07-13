@@ -7,15 +7,9 @@ import libcst as cst
 
 
 class AutodocInjector(cst.CSTTransformer):
-    def __init__(
-        self,
-        target_function: str,
-        new_docstring: str,
-    ):
+    def __init__(self, target_function: str, new_docstring: str):
         self.target_function = target_function
         self.new_docstring = new_docstring if new_docstring else ""
-        self.signature_node = None
-
 
     def leave_FunctionDef(
         self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
@@ -23,10 +17,6 @@ class AutodocInjector(cst.CSTTransformer):
         if original_node.name.value != self.target_function:
             return updated_node
         modified_node = updated_node
-        if self.signature_node and isinstance(self.signature_node, cst.FunctionDef):
-            modified_node = modified_node.with_changes(
-                params=self.signature_node.params, returns=self.signature_node.returns
-            )
         if self.new_docstring:
             docstring_expr = cst.SimpleStatementLine(
                 body=[cst.Expr(value=cst.SimpleString(value=self.new_docstring))]
@@ -51,11 +41,8 @@ class AutodocInjector(cst.CSTTransformer):
             )
         return modified_node
 
-def inject_autodoc(
-    source_code: str,
-    target_function: str,
-    new_docstring: str,
-) -> str:
+
+def inject_autodoc(source_code: str, target_function: str, new_docstring: str) -> str:
     try:
         tree = cst.parse_module(source_code)
     except Exception as e:
@@ -68,9 +55,7 @@ def inject_autodoc(
         print("===============================", file=sys.stderr)
         raise e
     try:
-        injector = AutodocInjector(
-            target_function, new_docstring
-        )
+        injector = AutodocInjector(target_function, new_docstring)
         modified_tree = tree.visit(injector)
         return modified_tree.code
     except Exception as e:
