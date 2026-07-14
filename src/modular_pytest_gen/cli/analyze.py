@@ -21,6 +21,7 @@ def analyze_app(
         ),
     ] = 0,
 ):
+
     try:
         config = load_config(config_path)
     except Exception as e:

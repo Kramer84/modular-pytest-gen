@@ -12,6 +12,8 @@ test_root = "tests"
 
 [discovery]
 respect_dunder_all = true
+include_classes = true
+max_class_lines = 300
 exclude_patterns = [
     "*__init__.py",
     "build",
@@ -23,5 +25,5 @@ exclude_functions = []
 [llm]
 provider = "mistral"
 model = "codestral-latest"
-host = "https://api.mistral.ai" 
+host = "https://api.mistral.ai"
 structured = false

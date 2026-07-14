@@ -16,9 +16,11 @@ class BaseLLMClient(abc.ABC):
         tool_schema: Optional[Dict[str, Any]] = None,
         temperature: float = 0.1,
     ) -> str:
+
         pass
 
     def _extract_from_tool(self, tool_calls: list) -> str:
+
         if not tool_calls:
             return ""
         for call in tool_calls:
@@ -29,6 +31,7 @@ class BaseLLMClient(abc.ABC):
         return ""
 
     def _extract_from_markdown(self, text: str) -> str:
+
         if "```python" in text:
             blocks = text.split("```python")
             if len(blocks) > 1:
@@ -46,6 +49,7 @@ class OllamaClient(BaseLLMClient):
         host: str = "http://localhost:11434",
         model: str = "qwen2.5-coder:7b-instruct-q8_0",
     ):
+
         self.host = host.rstrip("/")
         self.model = model
         self.api_url = f"{self.host}/api/chat"
@@ -57,6 +61,7 @@ class OllamaClient(BaseLLMClient):
         tool_schema: Optional[Dict[str, Any]] = None,
         temperature: float = 0.1,
     ) -> str:
+
         payload = {
             "model": self.model,
             "messages": [
@@ -91,6 +96,7 @@ class OllamaClient(BaseLLMClient):
 
 class MistralClient(BaseLLMClient):
     def __init__(self, model: str = "codestral-latest"):
+
         self.model = model
         self.api_url = "https://api.mistral.ai/v1/chat/completions"
         self.api_key = os.environ.get("MISTRAL_API_KEY")
@@ -106,6 +112,7 @@ class MistralClient(BaseLLMClient):
         tool_schema: Optional[Dict[str, Any]] = None,
         temperature: float = 0.1,
     ) -> str:
+
         payload = {
             "model": self.model,
             "messages": [
@@ -139,6 +146,7 @@ class MistralClient(BaseLLMClient):
 
 
 def unload_ollama_model(model_name: str):
+
     print(
         f"\n[CLEANUP] Stopping Ollama model context framework execution for: {model_name}"
     )

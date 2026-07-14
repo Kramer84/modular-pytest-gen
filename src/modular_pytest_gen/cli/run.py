@@ -20,6 +20,7 @@ from ..validator import TestValidator
 def gather_global_context(
     config: ProjectConfig, resolver: ImportResolver
 ) -> Dict[str, Any]:
+
     context: Dict[str, Any] = {"constants": {}, "exceptions": []}
     for file_path in config.global_context:
         path = Path(file_path)
@@ -30,7 +31,12 @@ def gather_global_context(
             continue
         parser = ModuleParser(path)
         analysis = parser.parse()
-        context["constants"].update(analysis["constants"])
+        context["constants"].update(
+            {
+                constkey: constval["value"]
+                for constkey, constval in analysis["constants"].items()
+            }
+        )
         for exc in analysis["exceptions"]:
             try:
                 exc["import_path"] = resolver.get_import_path(path, exc["name"])
@@ -88,6 +94,7 @@ def run_app(
         ),
     ] = False,
 ):
+
     try:
         config = load_config(config_path)
     except Exception as e:
@@ -147,7 +154,10 @@ def run_app(
     for py_file in source_root.rglob("*.py"):
         try:
             analysis = ModuleParser(py_file).parse()
-            for const_name, const_val in analysis["constants"].items():
+            for const_name, const_val in {
+                constkey: constval["value"]
+                for constkey, constval in analysis["constants"].items()
+            }:
                 project_wide_context["constants"][const_name] = const_val
             for exc in analysis["exceptions"]:
                 project_wide_context["exceptions"][exc["name"]] = exc
@@ -174,10 +184,14 @@ def run_app(
                 typer.echo("  -> Skipping: Static profile detected.")
                 continue
             targets_to_test = module_analysis["functions"]
-            if include_classes:
+            if include_classes or config.discovery.include_classes:
                 for cls in module_analysis["classes"]:
                     line_count = len(cls["code"].splitlines())
-                    if line_count <= max_class_lines:
+                    if line_count <= (
+                        config.discovery.max_class_lines
+                        if config.discovery.max_class_lines
+                        else max_class_lines
+                    ):
                         targets_to_test.append(cls)
                     else:
                         typer.echo(

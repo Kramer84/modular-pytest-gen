@@ -6,9 +6,11 @@ from .config import ProjectConfig
 
 class LayoutManager:
     def __init__(self, config: ProjectConfig):
+
         self.config = config
 
     def get_test_file_path(self, source_file_path: Union[str, Path]) -> Path:
+
         source_path = Path(source_file_path).resolve()
         if not source_path.name.endswith(".py"):
             raise ValueError(f"Source path must be a Python file: {source_path}")

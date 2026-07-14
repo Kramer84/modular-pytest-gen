@@ -6,11 +6,13 @@ from . import templates
 
 class PromptBuilder:
     def __init__(self, structured_output: bool = False):
+
         self.structured_output = structured_output
 
     def build_system_prompt(
         self, global_context: Dict[str, Any], fully_qualified_path: str
     ) -> str:
+
         template = (
             templates.SYSTEM_PROMPT_STRUCTURED
             if self.structured_output
@@ -50,6 +52,7 @@ class PromptBuilder:
         import_statement: str,
         custom_instructions: str = "",
     ) -> str:
+
         user_prompt = templates.USER_PROMPT_HEADER + "\n"
         user_prompt += templates.USER_PROMPT_IMPORTS.format(
             import_statement=import_statement,
@@ -79,6 +82,7 @@ class PromptBuilder:
         return user_prompt
 
     def get_tool_schema(self) -> Dict[str, Any]:
+
         return {
             "type": "function",
             "function": {

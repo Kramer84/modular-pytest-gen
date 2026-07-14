@@ -15,6 +15,7 @@ def clean_app(
         str, typer.Option("--dry-run-dir", help="Directory containing dry run prompts")
     ] = "dry_run_prompts",
 ):
+
     try:
         config = load_config(config_path)
     except Exception as e:

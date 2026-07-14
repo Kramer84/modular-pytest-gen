@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Literal
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -13,11 +13,11 @@ else:
 
 
 @dataclass
-class LayoutConfig:
-    strategy: str = "external"
-    structure: str = "nested"
+class TestGenerationLayoutConfig:
+    strategy: Literal["external", "adjacent"] = "external"
+    structure: Literal["nested", "flat"] = "nested"
     test_root: str = "tests"
-    granularity: str = "function"
+    granularity: Literal["function", "class", "module"] = "function"
 
 
 @dataclass
@@ -27,11 +27,13 @@ class DiscoveryConfig:
         default_factory=lambda: ["*__init__.py", "build", "tests", "*test_*.py"]
     )
     exclude_functions: List[str] = field(default_factory=list)
+    include_classes: bool = False
+    max_class_lines: int = 300
 
 
 @dataclass
 class LLMConfig:
-    provider: str = "ollama"
+    provider: Literal["ollama", "mistral"] = "ollama"
     model: str = "qwen2.5-coder:7b-instruct-q8_0"
     host: str = "http://localhost:11434"
     structured: bool = False
@@ -43,12 +45,15 @@ class ProjectConfig:
     import_prefix: str = ""
     global_context: List[str] = field(default_factory=list)
     custom_instructions: str = ""
-    layout: LayoutConfig = field(default_factory=LayoutConfig)
+    layout: TestGenerationLayoutConfig = field(
+        default_factory=TestGenerationLayoutConfig
+    )
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
 
 
 def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
+
     if tomllib is None:
         raise ImportError(
             "The 'tomli' library is required to parse TOML files on Python < 3.11."
@@ -70,7 +75,7 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
         return ProjectConfig()
     layout_data = tool_data.get("layout", {})
     discovery_data = tool_data.get("discovery", {})
-    layout = LayoutConfig(
+    layout = TestGenerationLayoutConfig(
         strategy=layout_data.get("strategy", "external"),
         structure=layout_data.get("structure", "nested"),
         test_root=layout_data.get("test_root", "tests"),
@@ -82,6 +87,8 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
             "exclude_patterns", ["*__init__.py", "*test_*.py"]
         ),
         exclude_functions=discovery_data.get("exclude_functions", []),
+        include_classes=discovery_data.get("include_classes", False),
+        max_class_lines=discovery_data.get("max_class_lines", 300),
     )
     llm_data = tool_data.get("llm", {})
     llm = LLMConfig(

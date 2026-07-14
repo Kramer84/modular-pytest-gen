@@ -9,23 +9,44 @@ import typer
 from .. import templates
 from ..client import BaseLLMClient, MistralClient, OllamaClient
 from ..config import load_config
-from ..docstring import NumpyDocstringSchema, build_numpy_docstring
+from ..docstring import (
+    ClassDocstringSchema,
+    ConstantDocstringSchema,
+    FunctionDocstringSchema,
+    InitMethodDocstringSchema,
+    MethodDocstringSchema,
+    build_numpy_docstring,
+)
 from ..graph import DependencyGraph
 from ..injector import inject_autodoc
 from ..parser import ModuleParser
 from ..resolver import ImportResolver
 
 
-def get_autodoc_tool_schema() -> dict:
-    if hasattr(NumpyDocstringSchema, "model_json_schema"):
-        parameters_schema = NumpyDocstringSchema.model_json_schema()
+def get_schema_model(target_type: str):
+
+    mapping = {
+        "function": FunctionDocstringSchema,
+        "class": ClassDocstringSchema,
+        "method": MethodDocstringSchema,
+        "init_method": InitMethodDocstringSchema,
+        "constant": ConstantDocstringSchema,
+    }
+    return mapping.get(target_type, FunctionDocstringSchema)
+
+
+def get_autodoc_tool_schema(target_type: str) -> dict:
+
+    model = get_schema_model(target_type)
+    if hasattr(model, "model_json_schema"):
+        parameters_schema = model.model_json_schema()
     else:
-        parameters_schema = NumpyDocstringSchema.schema()
+        parameters_schema = model.schema()
     return {
         "type": "function",
         "function": {
             "name": "write_autodoc",
-            "description": "Outputs the granular docstring components, the upgraded function signature, and any required imports.",
+            "description": f"Outputs the granular docstring components for a {target_type}.",
             "parameters": parameters_schema,
         },
     }
@@ -73,6 +94,7 @@ def autodoc_app(
         ),
     ] = "llama3.1:8B",
 ):
+
     if mode not in ["generate", "verify"]:
         typer.secho("Mode must be 'generate' or 'verify'.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -129,7 +151,38 @@ def autodoc_app(
         if target_file.name == "__init__.py":
             continue
         analysis = ModuleParser(target_file).parse()
+        targets_to_doc = []
         for func in analysis["functions"]:
+            func["target_type"] = "function"
+            targets_to_doc.append(func)
+        if config.discovery.include_classes:
+            max_class_lines = getattr(config.discovery, "max_class_lines", 300)
+            for cls in analysis["classes"]:
+                line_count = len(cls["code"].splitlines())
+                if line_count <= max_class_lines:
+                    cls["target_type"] = "class"
+                    targets_to_doc.append(cls)
+                else:
+                    typer.echo(
+                        f"  -> Skipping class summary: {cls['name']} ({line_count} lines exceeds max {max_class_lines})"
+                    )
+            for method in analysis["methods"]:
+                method["target_type"] = (
+                    "init_method" if method["name"].endswith(".__init__") else "method"
+                )
+                targets_to_doc.append(method)
+        for const_name, const_meta in analysis["constants"].items():
+            targets_to_doc.append(
+                {
+                    "name": const_name,
+                    "signature": f"{const_name} = ...",
+                    "code": f"{const_name} = {const_meta['value']}",
+                    "docstring": const_meta["docstring"],
+                    "used_names": [],
+                    "target_type": "constant",
+                }
+            )
+        for func in targets_to_doc:
             try:
                 func_logical_path = resolver.get_import_path(target_file, func["name"])
             except ValueError:
@@ -179,7 +232,7 @@ def autodoc_app(
                 pass
         system_prompt = templates.AUTODOC_SYSTEM_PROMPT.format(
             style_guide=templates.NUMPY_STYLE_GUIDE,
-            beartype_guide=templates.BEARTYPE_STYLE_GUIDE,
+            target_type=target["target_type"].replace("_", " ").upper(),
         )
         if mode == "generate":
             user_prompt = templates.AUTODOC_GENERATE_USER.format(
@@ -197,7 +250,7 @@ def autodoc_app(
                 code=target["code"],
                 existing_docstring=target["docstring"],
             )
-        tool_schema = get_autodoc_tool_schema()
+        tool_schema = get_autodoc_tool_schema(target["target_type"])
         if dry_run:
             dry_dir = Path("dry_run_autodoc_prompts")
             dry_dir.mkdir(exist_ok=True)
@@ -215,7 +268,7 @@ def autodoc_app(
             continue
         try:
             raw_response = client.generate_test(
-                system_prompt, user_prompt, temperature=0.025, tool_schema=tool_schema
+                system_prompt, user_prompt, temperature=0.05, tool_schema=tool_schema
             )
             if verbose:
                 typer.secho("\n[DEBUG] --- RAW LLM RESPONSE ---", fg=typer.colors.CYAN)
@@ -230,8 +283,12 @@ def autodoc_app(
                 payload = payload["arguments"]
                 if isinstance(payload, str):
                     payload = json.loads(payload)
+            if "parameters" in payload and isinstance(payload["parameters"], dict):
+                if "short_summary" in payload["parameters"]:
+                    payload = payload["parameters"]
             try:
-                doc_schema = NumpyDocstringSchema(**payload)
+                schema_model = get_schema_model(target["target_type"])
+                doc_schema = schema_model(**payload)
             except Exception as schema_err:
                 typer.secho(
                     f"     [ERROR] LLM output failed schema validation: {schema_err}",
@@ -270,9 +327,15 @@ def autodoc_app(
                                     try_i += 1
                             if try_i > n_tries:
                                 typer.secho(
-                                    f"     [TITLE COMPRESSION FAILED] Output was {len(compressed_title)} chars. Keeping original.",
+                                    f"     [TITLE COMPRESSION FAILED] Output was {len(compressed_title)}, original was {len(doc_schema.short_summary)} chars. Keeping Shortest.",
                                     fg=typer.colors.YELLOW,
                                 )
+                                if len(compressed_title) < len(
+                                    doc_schema.short_summary
+                                ):
+                                    doc_schema.short_summary = (
+                                        compressed_title.capitalize()
+                                    )
                                 break
                         except Exception as e:
                             if verbose:
@@ -295,8 +358,13 @@ def autodoc_app(
                 write_path = file_path
                 source_code = file_path.read_text(encoding="utf-8")
             base_indent = 4
+            base_name = target["name"].split(".")[-1]
             for line in source_code.splitlines():
-                if re.match(f"^\\s*(async\\s+)?def\\s+{target['name']}\\s*\\(", line):
+                if (
+                    re.match(f"^\\s*(async\\s+)?def\\s+{base_name}\\s*\\(", line)
+                    or re.match(f"^\\s*class\\s+{base_name}\\b", line)
+                    or re.match(f"^\\s*{base_name}\\s*=", line)
+                ):
                     base_indent = len(line) - len(line.lstrip()) + 4
                     break
             new_docstring = build_numpy_docstring(

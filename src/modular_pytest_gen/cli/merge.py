@@ -29,6 +29,7 @@ def merge_app(
         ),
     ] = None,
 ):
+
     try:
         config = load_config(config_path)
         layout = LayoutManager(config)

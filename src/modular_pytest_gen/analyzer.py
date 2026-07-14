@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 class TestRegistryAnalyzer:
     def __init__(self, tmp_dir: str | Path):
+
         self.tmp_dir = Path(tmp_dir)
         self.summary = {
             "total_functions_scanned": 0,
@@ -16,6 +17,7 @@ class TestRegistryAnalyzer:
         }
 
     def _extract_primary_error(self, content: str) -> str:
+
         error_lines = re.findall("^E\\s+(.*)", content, re.MULTILINE)
         if error_lines:
             primary = error_lines[0].strip()
@@ -28,6 +30,7 @@ class TestRegistryAnalyzer:
             return "Unknown Error (Check raw log manually)"
 
     def analyze(self) -> Dict[str, Any]:
+
         if not self.tmp_dir.exists():
             return self.summary
         for module_dir in self.tmp_dir.iterdir():
@@ -86,6 +89,7 @@ class TestRegistryAnalyzer:
         return self.summary
 
     def print_report(self, verbosity: int = 0):
+
         print("\n============================================================")
         print("                TEST REGISTRY ANALYSIS REPORT               ")
         print("============================================================")

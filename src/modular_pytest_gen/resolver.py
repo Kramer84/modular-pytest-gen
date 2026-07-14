@@ -5,6 +5,7 @@ from typing import Any, Dict, Set, Union
 
 class ImportResolver:
     def __init__(self, source_root: Union[str, Path], import_prefix: str):
+
         self.source_root = Path(source_root).resolve()
         self.import_prefix = import_prefix
         self.physical_to_logical: Dict[str, str] = {}
@@ -13,9 +14,11 @@ class ImportResolver:
         self._build_tree()
 
     def __repr__(self) -> str:
+
         return f"ImportResolver(source_root={self.source_root!r}, import_prefix={self.import_prefix!r}, files_mapped={len(self.physical_to_logical)}, aliases_found={len(self.public_aliases)})"
 
     def _get_file_definitions(self, file_path: Path) -> Set[str]:
+
         definitions: Set[str] = set()
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"))
@@ -33,6 +36,7 @@ class ImportResolver:
         return definitions
 
     def _build_tree(self):
+
         if not self.source_root.exists():
             return
         all_files = list(self.source_root.rglob("*.py"))
@@ -67,6 +71,7 @@ class ImportResolver:
             self._parse_init(file_path_resolved, logical_path)
 
     def _parse_init(self, file_path: Path, current_logical_path: str):
+
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"))
         except SyntaxError:
@@ -166,6 +171,7 @@ class ImportResolver:
                                     ] = f"{current_logical_path}.{obj_name}"
 
     def get_import_path(self, physical_file: Union[str, Path], object_name: str) -> str:
+
         physical_file_str = str(Path(physical_file).resolve())
         if (
             physical_file_str in self.public_aliases

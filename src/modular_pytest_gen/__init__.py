@@ -1,21 +1,23 @@
 __version__ = "0.1.0"
 from .analyzer import TestRegistryAnalyzer
 from .client import BaseLLMClient, MistralClient, OllamaClient, unload_ollama_model
-from .config import DiscoveryConfig, LayoutConfig, LLMConfig, ProjectConfig, load_config
+from .config import (
+    DiscoveryConfig,
+    LLMConfig,
+    ProjectConfig,
+    TestGenerationLayoutConfig,
+    load_config,
+)
 from .docstring import (
-    DeprecationDetail,
-    NumpyDocstringSchema,
-    ParameterDetail,
-    ReturnDetail,
-    SeeAlsoItem,
+    ClassDocstringSchema,
+    ConstantDocstringSchema,
+    FunctionDocstringSchema,
+    InitMethodDocstringSchema,
+    MethodDocstringSchema,
     build_numpy_docstring,
-    smart_wrap,
 )
 from .graph import DependencyGraph
-from .injector import (
-    AutodocInjector,
-    inject_autodoc,
-)
+from .injector import AutodocInjector, inject_autodoc
 from .layout import LayoutManager
 from .merge import TestMerger
 from .parser import ModuleParser
@@ -49,11 +51,10 @@ __all__ = [
     "OllamaClient",
     "unload_ollama_model",
     "DiscoveryConfig",
-    "LayoutConfig",
+    "TestGenerationLayoutConfig",
     "LLMConfig",
     "ProjectConfig",
     "load_config",
-    "BeartypeMeta",
     "DeprecationDetail",
     "NumpyDocstringSchema",
     "ParameterDetail",

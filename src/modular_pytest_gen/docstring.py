@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 
+
 class DeprecationDetail(BaseModel):
     version: str = Field(
         ..., description="The version in which the feature was deprecated."
@@ -15,7 +16,9 @@ class DeprecationDetail(BaseModel):
 
 class ParameterDetail(BaseModel):
     name: str
-    type_hint: str = Field(description="The string representation of the type hint (e.g., 'list[str]' or 'int').")
+    type_hint: str = Field(
+        description="The string representation of the type hint (e.g., 'list[str]' or 'int')."
+    )
     description: str
     is_optional: bool = False
     default_value: Optional[str] = None
@@ -23,6 +26,7 @@ class ParameterDetail(BaseModel):
         default_factory=list,
         description="Allowed values, mapping to Literal or NumPy set notation. Default value first.",
     )
+
 
 class ReturnDetail(BaseModel):
     name: Optional[str] = Field(
@@ -43,7 +47,22 @@ class SeeAlsoItem(BaseModel):
     )
 
 
-class NumpyDocstringSchema(BaseModel):
+class ExceptionDetail(BaseModel):
+    exception_type: str = Field(
+        ...,
+        description="The exact Exception or Warning class name (e.g., 'ValueError').",
+    )
+    description: List[str] = Field(
+        description="List of strings explaining the trigger condition. Use separate items for different paragraphs."
+    )
+
+
+class RoutineListingItem(BaseModel):
+    name: str = Field(..., description="Name of the routine (function or class).")
+    description: str = Field(..., description="Short summary of the routine.")
+
+
+class BaseNumPyDocstringSchema(BaseModel):
     short_summary: str = Field(
         ...,
         description="Short, imperative summary not using variable names or the function name.",
@@ -53,18 +72,22 @@ class NumpyDocstringSchema(BaseModel):
         None,
         description="Clarifies functionality without implementation details or theory.",
     )
+    see_also: List[SeeAlsoItem] = Field(default_factory=list)
+    references: List[str] = Field(
+        default_factory=list,
+        description="Publications or source documentation citations. Do NOT include the '.. [x]' numbering prefix; the builder automatically applies it.",
+    )
+    examples: List[str] = Field(
+        default_factory=list,
+        description="Doctest-style lines execution examples (>>>).",
+    )
+
+
+class FunctionDocstringSchema(BaseNumPyDocstringSchema):
     parameters: List[ParameterDetail] = Field(default_factory=list)
-    attributes: List[ParameterDetail] = Field(
-        default_factory=list,
-        description="Used when documenting classes to define non-method attributes.",
-    )
-    methods: List[SeeAlsoItem] = Field(
-        default_factory=list,
-        description="Used when documenting classes to summarize public API methods.",
-    )
     returns: Optional[ReturnDetail] = None
     yields: Optional[ReturnDetail] = Field(
-        None, description="Explains yieled values and types for generators."
+        None, description="Explains yielded values and types for generators."
     )
     receives: List[ParameterDetail] = Field(
         default_factory=list,
@@ -73,33 +96,78 @@ class NumpyDocstringSchema(BaseModel):
     other_parameters: List[ParameterDetail] = Field(
         default_factory=list, description="Infrequently used keywords."
     )
-    raises: List[ReturnDetail] = Field(
-        default_factory=list, description="Name field holds Exception class name."
-    )
-    warns: List[ReturnDetail] = Field(
-        default_factory=list, description="Name field holds Warning class name."
-    )
+    raises: List[ExceptionDetail] = Field(default_factory=list)
+    warns: List[ExceptionDetail] = Field(default_factory=list)
     warnings: Optional[str] = Field(
         None, description="Free-text area for highly critical user cautions."
     )
-    see_also: List[SeeAlsoItem] = Field(default_factory=list)
     notes: Optional[List[str]] = Field(
         default=None,
         description="Theory, math or algorithm discussion. Each list item represents a new paragraph, a directive, or equation.",
     )
-    references: List[str] = Field(
+
+
+class MethodDocstringSchema(FunctionDocstringSchema):
+    parameters: List[ParameterDetail] = Field(
         default_factory=list,
-        description="Publications or source documentation citations.",
+        description="Arguments for the method. Do NOT include 'self' in the parameter list.",
     )
-    examples: List[str] = Field(
+
+
+class ClassDocstringSchema(BaseNumPyDocstringSchema):
+    parameters: List[ParameterDetail] = Field(
         default_factory=list,
-        description="Doctest-style lines execution examples (>>>).",
+        description="Constructor arguments. Do NOT include 'self'.",
     )
+    attributes: List[ParameterDetail] = Field(
+        default_factory=list, description="Non-method variables."
+    )
+    methods: List[SeeAlsoItem] = Field(
+        default_factory=list,
+        description="Summary of the public API. Never include private methods starting with '_'.",
+    )
+    other_parameters: List[ParameterDetail] = Field(
+        default_factory=list, description="Infrequently used keywords."
+    )
+    raises: List[ExceptionDetail] = Field(default_factory=list)
+    warns: List[ExceptionDetail] = Field(default_factory=list)
+    warnings: Optional[str] = Field(
+        None, description="Free-text area for highly critical user cautions."
+    )
+    notes: Optional[List[str]] = Field(
+        default=None,
+        description="Theory, math or algorithm discussion. Each list item represents a new paragraph, a directive, or equation.",
+    )
+
+
+class InitMethodDocstringSchema(BaseNumPyDocstringSchema):
+    notes: Optional[List[str]] = Field(
+        default=None, description="Theory, math or algorithm discussion."
+    )
+    warnings: Optional[str] = Field(
+        None, description="Free-text area for highly critical user cautions."
+    )
+
+
+class ModuleDocstringSchema(BaseNumPyDocstringSchema):
+    routine_listings: List[RoutineListingItem] = Field(
+        default_factory=list,
+        description="Listings of classes and functions. Encouraged for large modules.",
+    )
+    notes: Optional[List[str]] = Field(
+        default=None,
+        description="Theory, math or algorithm discussion. Do NOT include author or license information here.",
+    )
+
+
+class ConstantDocstringSchema(BaseNumPyDocstringSchema):
+    pass
 
 
 def smart_wrap(
     text_segments: Union[List[str], str], wrapper: textwrap.TextWrapper
 ) -> List[str]:
+
     if not text_segments:
         return []
     if isinstance(text_segments, str):
@@ -135,8 +203,9 @@ def smart_wrap(
 
 
 def build_numpy_docstring(
-    schema: NumpyDocstringSchema, base_indent: int = 4, max_line_length: int = 75
+    schema: "BaseNumPyDocstringSchema", base_indent: int = 4, max_line_length: int = 75
 ) -> str:
+
     indent = " " * base_indent
     content_width = max_line_length - base_indent
     wrapper = textwrap.TextWrapper(
@@ -151,23 +220,28 @@ def build_numpy_docstring(
     )
     lines = []
 
-    def _format_parameter_block(params: List[ParameterDetail]):
+    def _format_parameter_block(params: List["ParameterDetail"]):
         block_lines = []
         for p in params:
             if p.choices:
-                type_str = f"{{{', '.join((repr(c) for c in p.choices))}}}"
+                clean_choices = [c.strip("\"'") for c in p.choices]
+                type_str = f"{{{', '.join((repr(c) for c in clean_choices))}}}"
             else:
                 type_str = p.type_hint
             if p.is_optional:
                 type_str += ", optional"
+            if type_str:
+                block_lines.append(f"{p.name} : {type_str}")
+            else:
+                block_lines.append(p.name)
+            desc_text = p.description
             if p.default_value is not None:
-                type_str += f" (default is {p.default_value})"
-            block_lines.append(f"{p.name} : {type_str}" if type_str else p.name)
-            segments = p.description.split("\n\n")
+                desc_text += f" (the default is {p.default_value})."
+            segments = desc_text.split("\n\n")
             block_lines.extend(smart_wrap(segments, desc_wrapper))
         return block_lines
 
-    def _format_return_block(returns_list: List[ReturnDetail]):
+    def _format_return_block(returns_list: List["ReturnDetail"]):
         block_lines = []
         for r in returns_list:
             if r.name:
@@ -177,55 +251,73 @@ def build_numpy_docstring(
             block_lines.extend(smart_wrap(r.description, desc_wrapper))
         return block_lines
 
+    def _format_exception_block(exceptions_list: List["ExceptionDetail"]):
+        block_lines = []
+        for e in exceptions_list:
+            block_lines.append(e.exception_type)
+            block_lines.extend(smart_wrap(e.description, desc_wrapper))
+        return block_lines
+
     if schema.short_summary:
         lines.extend(wrapper.wrap(schema.short_summary))
-    if schema.deprecation:
+    if getattr(schema, "deprecation", None):
         lines.append("")
         lines.append(f".. deprecated:: {schema.deprecation.version}")
         dep_msg_wrapper = textwrap.TextWrapper(
             width=content_width, initial_indent="   ", subsequent_indent="   "
         )
         lines.extend(dep_msg_wrapper.wrap(schema.deprecation.message))
-    if schema.extended_summary:
+    if getattr(schema, "extended_summary", None):
         lines.append("")
         segments = schema.extended_summary.split("\n\n")
         lines.extend(smart_wrap(segments, wrapper))
-    if schema.parameters:
+    if getattr(schema, "routine_listings", None):
+        lines.extend(["", "Routine Listings", "----------------"])
+        for r in schema.routine_listings:
+            if r.description:
+                lines.append(f"{r.name} :")
+                segments = r.description.split("\n\n")
+                lines.extend(smart_wrap(segments, desc_wrapper))
+            else:
+                lines.append(r.name)
+    if getattr(schema, "parameters", None):
         lines.extend(["", "Parameters", "----------"])
         lines.extend(_format_parameter_block(schema.parameters))
-    if schema.attributes:
+    if getattr(schema, "attributes", None):
         lines.extend(["", "Attributes", "----------"])
         lines.extend(_format_parameter_block(schema.attributes))
-    if schema.methods:
+    if getattr(schema, "methods", None):
         lines.extend(["", "Methods", "-------"])
         for m in schema.methods:
-            lines.append(m.name)
             if m.description:
+                lines.append(f"{m.name} :")
                 segments = m.description.split("\n\n")
                 lines.extend(smart_wrap(segments, desc_wrapper))
-    if schema.returns:
+            else:
+                lines.append(m.name)
+    if getattr(schema, "returns", None):
         lines.extend(["", "Returns", "-------"])
         lines.extend(_format_return_block([schema.returns]))
-    if schema.yields:
+    if getattr(schema, "yields", None):
         lines.extend(["", "Yields", "------"])
         lines.extend(_format_return_block([schema.yields]))
-    if schema.receives:
+    if getattr(schema, "receives", None):
         lines.extend(["", "Receives", "--------"])
         lines.extend(_format_parameter_block(schema.receives))
-    if schema.other_parameters:
+    if getattr(schema, "other_parameters", None):
         lines.extend(["", "Other Parameters", "----------------"])
         lines.extend(_format_parameter_block(schema.other_parameters))
-    if schema.raises:
+    if getattr(schema, "raises", None):
         lines.extend(["", "Raises", "------"])
-        lines.extend(_format_return_block(schema.raises))
-    if schema.warns:
+        lines.extend(_format_exception_block(schema.raises))
+    if getattr(schema, "warns", None):
         lines.extend(["", "Warns", "-----"])
-        lines.extend(_format_return_block(schema.warns))
-    if schema.warnings:
+        lines.extend(_format_exception_block(schema.warns))
+    if getattr(schema, "warnings", None):
         lines.extend(["", "Warnings", "--------"])
         segments = schema.warnings.split("\n\n")
         lines.extend(smart_wrap(segments, wrapper))
-    if schema.see_also:
+    if getattr(schema, "see_also", None):
         lines.extend(["", "See Also", "--------"])
         simple_items = [item.name for item in schema.see_also if not item.description]
         if simple_items:
@@ -235,10 +327,10 @@ def build_numpy_docstring(
                 lines.append(f"{item.name} :")
                 segments = item.description.split("\n\n")
                 lines.extend(smart_wrap(segments, desc_wrapper))
-    if schema.notes:
+    if getattr(schema, "notes", None):
         lines.extend(["", "Notes", "-----"])
         lines.extend(smart_wrap(schema.notes, wrapper))
-    if schema.references:
+    if getattr(schema, "references", None):
         lines.extend(["", "References", "----------"])
         for i, ref in enumerate(schema.references, 1):
             ref_wrapper = textwrap.TextWrapper(
@@ -247,7 +339,7 @@ def build_numpy_docstring(
                 subsequent_indent="   ",
             )
             lines.extend(ref_wrapper.wrap(ref))
-    if schema.examples:
+    if getattr(schema, "examples", None):
         lines.extend(["", "Examples", "--------"])
         for ex in schema.examples:
             lines.extend(ex.split("\n"))
