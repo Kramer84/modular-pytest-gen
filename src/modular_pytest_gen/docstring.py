@@ -19,7 +19,9 @@ class ParameterDetail(BaseModel):
     type_hint: str = Field(
         description="The string representation of the type hint (e.g., 'list[str]' or 'int')."
     )
-    description: str
+    description: str = Field(
+        description="A concise definition of the parameter (1 sentence maximum). Do not explain why it is used. DO NOT mention default values here; they are appended automatically."
+    )
     is_optional: bool = False
     default_value: Optional[str] = None
     choices: List[str] = Field(
@@ -62,7 +64,7 @@ class RoutineListingItem(BaseModel):
     description: str = Field(..., description="Short summary of the routine.")
 
 
-class BaseNumPyDocstringSchema(BaseModel):
+class CoreNumPyDocstringSchema(BaseModel):
     short_summary: str = Field(
         ...,
         description="Short, imperative summary not using variable names or the function name.",
@@ -72,10 +74,16 @@ class BaseNumPyDocstringSchema(BaseModel):
         None,
         description="Clarifies functionality without implementation details or theory.",
     )
-    see_also: List[SeeAlsoItem] = Field(default_factory=list)
+
+
+class BaseNumPyDocstringSchema(CoreNumPyDocstringSchema):
+    see_also: List[SeeAlsoItem] = Field(
+        default_factory=list,
+        description="References to other codes. Optional. Never put references to the standard library or well known tools.",
+    )
     references: List[str] = Field(
         default_factory=list,
-        description="Publications or source documentation citations. Do NOT include the '.. [x]' numbering prefix; the builder automatically applies it.",
+        description="Publications or source documentation citations if provided. Optional. Do NOT include the '.. [x]' numbering prefix.",
     )
     examples: List[str] = Field(
         default_factory=list,
@@ -160,8 +168,15 @@ class ModuleDocstringSchema(BaseNumPyDocstringSchema):
     )
 
 
-class ConstantDocstringSchema(BaseNumPyDocstringSchema):
-    pass
+class ConstantDocstringSchema(CoreNumPyDocstringSchema):
+    extended_summary: Optional[str] = Field(
+        None,
+        description=(
+            "Clarifies functionality. ONLY populate this if the constant's value "
+            "derives from a complex formula, has non-obvious side effects, or requires "
+            "specific domain context not apparent from its name. Do not exceed 1-2 sentences."
+        ),
+    )
 
 
 def smart_wrap(
@@ -236,7 +251,24 @@ def build_numpy_docstring(
                 block_lines.append(p.name)
             desc_text = p.description
             if p.default_value is not None:
-                desc_text += f" (the default is {p.default_value})."
+                desc_text = re.sub(
+                    r"(?i)\s*\(\s*(?:the\s+)?default(?:s\s+to|is|\s+value\s+is|:).*?\)",
+                    "",
+                    desc_text,
+                )
+
+                desc_text = re.sub(
+                    r"(?i)\s*\b(?:the\s+)?default(?:s\s+to|is|\s+value\s+is|:)\b.*?(?:\.\s+|\.$|$)",
+                    " ",
+                    desc_text,
+                )
+
+                desc_text = desc_text.strip()
+                desc_text = re.sub(r"\s{2,}", " ", desc_text)
+                desc_text = desc_text.rstrip(".") + "."
+
+                desc_text += f" Default is {p.default_value}."
+
             segments = desc_text.split("\n\n")
             block_lines.extend(smart_wrap(segments, desc_wrapper))
         return block_lines
