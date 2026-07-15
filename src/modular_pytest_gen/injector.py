@@ -7,10 +7,10 @@ import libcst as cst
 class AutodocInjector(cst.CSTTransformer):
     r"""
     Inject docstrings into Python AST nodes.
-
+    
     Transforms CST nodes by injecting docstrings into class definitions,
     function definitions, or module-level constants.
-
+    
     Parameters
     ----------
     target_path_str : str
@@ -18,7 +18,7 @@ class AutodocInjector(cst.CSTTransformer):
         'module.Class.method').
     new_docstring : str, optional
         The docstring to inject into the target node.
-
+    
     Attributes
     ----------
     target_path : List[str]
@@ -27,7 +27,7 @@ class AutodocInjector(cst.CSTTransformer):
         The docstring to inject into the target node.
     current_path : List[str]
         The current path being traversed during AST traversal.
-
+    
     Methods
     -------
     visit_ClassDef :
@@ -43,12 +43,12 @@ class AutodocInjector(cst.CSTTransformer):
     leave_Module :
         Leaves a module node and injects the docstring if the target is a
         module-level constant.
-
+    
     Notes
     -----
     The transformer handles both class and function docstring injection, as
     well as module-level constant docstrings.
-
+    
     The docstring is injected at the beginning of the node's body,
     replacing any existing docstring if present.
     """
@@ -56,15 +56,15 @@ class AutodocInjector(cst.CSTTransformer):
     def __init__(self, target_path_str: str, new_docstring: str):
         r"""
         Initialize a docstring writer for a target object.
-
+        
         Constructs a docstring writer instance with the target object's
         path and the new docstring content.
-
+        
         Warnings
         --------
         Ensure the target path is a valid Python object path to avoid
         runtime errors.
-
+        
         See Also
         --------
         ast.NodeVisitor :
@@ -72,7 +72,7 @@ class AutodocInjector(cst.CSTTransformer):
             structures.
         inspect.getdoc :
             The function used to retrieve the docstring of a Python object.
-
+        
         Notes
         -----
         The target path is split into a list of strings for easier
@@ -86,19 +86,21 @@ class AutodocInjector(cst.CSTTransformer):
     def visit_ClassDef(self, node: cst.ClassDef):
         r"""
         Process a class definition node.
-
-        This method processes a class definition node by appending its name
-        to the current path and returning `True` to continue traversal.
-
+        
         Parameters
         ----------
         node : cst.ClassDef
             The class definition node to process.
-
+        
         Returns
         -------
         bool
             Returns `True` to indicate that traversal should continue.
+        
+        See Also
+        --------
+        modular_pytest_gen.ast_scanner.ASTScanner :
+            The AST scanner that processes class definitions.
         """
 
         self.current_path.append(node.name.value)
@@ -108,26 +110,27 @@ class AutodocInjector(cst.CSTTransformer):
         self, original_node: cst.ClassDef, updated_node: cst.ClassDef
     ) -> cst.ClassDef:
         r"""
-        Inject docstring into class definition body if target path matches.
-
-        This method checks if the current path matches the target path. If
-        it does, it injects a docstring into the class definition body.
-        Otherwise, it returns the original node.
-
+        Insert docstring into class definition if paths match.
+        
         Parameters
         ----------
         original_node : cst.ClassDef
             The original class definition node.
         updated_node : cst.ClassDef
             The updated class definition node.
-
+        
         Returns
         -------
         cst.ClassDef
             The updated class definition node with an injected docstring if
             the target path matches.
-
+        
             Otherwise, the original node is returned.
+        
+        See Also
+        --------
+        modular_pytest_gen.docstring.ClassDocstringSchema :
+            The schema used to generate the docstring for a class.
         """
 
         is_target = self.current_path == self.target_path
@@ -139,20 +142,17 @@ class AutodocInjector(cst.CSTTransformer):
     def visit_FunctionDef(self, node: cst.FunctionDef):
         r"""
         Process a function definition node in the AST.
-
-        This method processes a function definition node by appending its
-        name to the current path and returning True to continue traversal.
-
+        
         Parameters
         ----------
         node : cst.FunctionDef
             The function definition node to process.
-
+        
         Returns
         -------
         bool
             Returns True to indicate that the traversal should continue.
-
+        
         See Also
         --------
         visit_ClassDef :
@@ -167,20 +167,20 @@ class AutodocInjector(cst.CSTTransformer):
     ) -> cst.FunctionDef:
         r"""
         Injects a docstring into the target function body.
-
+        
         Parameters
         ----------
         original_node : cst.FunctionDef
             The original function definition node.
         updated_node : cst.FunctionDef
             The updated function definition node.
-
+        
         Returns
         -------
         cst.FunctionDef
             The function definition node with the injected docstring if it
             matches the target path, otherwise the original updated node.
-
+        
         Raises
         ------
         ValueError
@@ -199,33 +199,33 @@ class AutodocInjector(cst.CSTTransformer):
     ) -> cst.Module:
         r"""
         Injects a constant docstring into the target module.
-
+        
         This method is specifically designed to handle the injection of a
         constant docstring into a module when the target path consists of a
         single element. It ensures that the docstring is properly formatted
         and integrated into the module structure.
-
+        
         Parameters
         ----------
         original_node : cst.Module
             The original module node before any modifications.
         updated_node : cst.Module
             The updated module node after modifications.
-
+        
         Returns
         -------
         cst.Module
             The module node with the injected constant docstring if the
             target path has a single element.
-
+        
             Otherwise, returns the updated node as-is.
-
+        
         Raises
         ------
         ValueError
             If the target path is empty or contains more than one element,
             indicating an invalid state for docstring injection.
-
+        
         Warnings
         --------
         Ensure that the target path is correctly set before calling this
@@ -239,25 +239,25 @@ class AutodocInjector(cst.CSTTransformer):
     def _inject_docstring_into_body(self, node):
         r"""
         Injects a generated docstring into the AST node body.
-
+        
         This method handles the insertion of a newly generated docstring
         into the body of an AST node. It ensures the docstring is properly
         formatted and placed at the beginning of the node's body, replacing
         any existing docstring if present.
-
+        
         Parameters
         ----------
         node : cst.CSTNode
             The AST node into which the docstring will be injected.
-
+        
         Returns
         -------
         cst.CSTNode
             The modified AST node with the injected docstring.
-
+        
             If no new docstring is available, the original node is returned
             unchanged.
-
+        
         Raises
         ------
         AttributeError
@@ -290,31 +290,31 @@ class AutodocInjector(cst.CSTTransformer):
     ) -> cst.Module:
         r"""
         Injects a docstring into a CST module node.
-
+        
         This method inserts a new docstring into the CST module node at the
         specified target name. If no new docstring is provided, the
         original node is returned unchanged.
-
+        
         Parameters
         ----------
         node : cst.Module
             The CST module node to which the docstring will be injected.
         target_name : str
             The name of the target where the docstring will be injected.
-
+        
         Returns
         -------
         cst.Module
             The modified CST module node with the injected docstring.
-
+        
             If no new docstring is provided, the original node is returned
             unchanged.
-
+        
         Raises
         ------
         AttributeError
             If the target node does not have the expected attributes.
-
+        
         Warnings
         --------
         Ensure the target_name exists in the CST module to avoid unexpected
@@ -362,12 +362,12 @@ class AutodocInjector(cst.CSTTransformer):
 def inject_autodoc(source_code: str, target_function: str, new_docstring: str) -> str:
     r"""
     Injects a new docstring into a target function's AST.
-
+    
     This function parses the provided source code into an Abstract Syntax
     Tree (AST) and injects the new docstring into the specified target
     function. It handles both successful and failed injection scenarios,
     providing detailed error messages for debugging.
-
+    
     Parameters
     ----------
     source_code : str
@@ -376,18 +376,18 @@ def inject_autodoc(source_code: str, target_function: str, new_docstring: str) -
         The name of the function to inject the docstring into.
     new_docstring : str
         The new docstring to be injected into the target function.
-
+    
     Returns
     -------
     str
         The modified source code with the new docstring injected into the
         target function.
-
+    
     Raises
     ------
     Exception
         If the source code fails to parse into an AST.
-
+    
         If the target function's signature cannot be parsed.
     """
 

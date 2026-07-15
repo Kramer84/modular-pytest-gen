@@ -16,20 +16,20 @@ else:
 class TestGenerationLayoutConfig:
     r"""
     Configure test generation layout strategy.
-
+    
     Defines the directory structure and granularity for generated test
     files.
-
+    
     Parameters
     ----------
     strategy : {'external', 'adjacent'}, optional
-        The directory layout strategy. Default is external.
+        The directory layout strategy. Default is 'external'.
     structure : {'nested', 'flat'}, optional
-        The nesting strategy for test files. Default is nested.
+        The nesting strategy for test files. Default is 'nested'.
     test_root : str, optional
-        The root directory for test files. Default is tests.
+        The root directory for test files. Default is 'tests'.
     granularity : {'function', 'class', 'module'}, optional
-        The granularity level for test generation. Default is function.
+        The granularity level for test generation. Default is 'function'.
     """
 
     strategy: Literal["external", "adjacent"] = "external"
@@ -42,12 +42,12 @@ class TestGenerationLayoutConfig:
 class DiscoveryConfig:
     r"""
     Configure test discovery and generation behavior.
-
+    
     The DiscoveryConfig class encapsulates settings that control how the
     AST scanner identifies and processes code elements for test generation.
     It allows fine-grained control over which modules, classes, and
     functions are included or excluded from the test generation process.
-
+    
     Parameters
     ----------
     respect_dunder_all : bool, optional
@@ -65,7 +65,7 @@ class DiscoveryConfig:
     max_class_lines : int, optional
         Maximum number of lines a class can have to be included in test
         generation. Default is 300.
-
+    
     See Also
     --------
     ast_scanner :
@@ -89,18 +89,17 @@ class DiscoveryConfig:
 class LLMConfig:
     r"""
     Configure the LLM provider and model.
-
+    
     This class encapsulates the configuration settings for the LLM
     provider, including the model name, host URL, and whether structured
     output is enabled.
-
+    
     Parameters
     ----------
     provider : {'mistral', 'ollama'}, optional
         The LLM provider to use. Default is mistral.
     model : str, optional
-        The name of the model to use. Default is
-        "codestral-latest".
+        The name of the model to use. Default is codestral-latest.
     host : str, optional
         The host URL for the LLM provider. Default is
         https://api.mistral.ai.
@@ -118,31 +117,27 @@ class LLMConfig:
 class ProjectConfig:
     r"""
     Configure the project settings for test generation.
-
+    
     The ProjectConfig class encapsulates the configuration settings for the
-    test generation process. It includes settings for the source root,
-    import prefix, global context, custom instructions, layout, discovery,
-    and LLM configuration.
-
+    test generation process.
+    
     Parameters
     ----------
     source_root : str, optional
-        The root directory of the source code. Default is src.
+        The root directory of the source code.
     import_prefix : str, optional
-        The prefix for imports. Default is .
+        The prefix for imports.
     global_context : List[str], optional
-        A list of global context strings. Default is [].
+        A list of global context strings.
     custom_instructions : str, optional
-        Custom instructions for the test generation process. Default is .
+        Custom instructions for the test generation process.
     layout : TestGenerationLayoutConfig, optional
-        The layout configuration for test generation. Default is
-        TestGenerationLayoutConfig().
+        The layout configuration for test generation.
     discovery : DiscoveryConfig, optional
-        The discovery configuration for test generation. Default is
-        DiscoveryConfig().
+        The discovery configuration for test generation.
     llm : LLMConfig, optional
-        The LLM configuration for test generation. Default is LLMConfig().
-
+        The LLM configuration for test generation.
+    
     See Also
     --------
     modular_pytest_gen.DiscoveryConfig :
@@ -167,23 +162,20 @@ class ProjectConfig:
 def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
     r"""
     Load project configuration from a TOML file.
-
-    Parses a TOML configuration file to extract project settings. If the
-    file does not exist, returns a default configuration.
-
+    
     Parameters
     ----------
     config_path : Path | str, optional
-        Path to the TOML configuration file. Default is autotest.toml.
-
+        Path to the TOML configuration file. Default is 'autotest.toml'.
+    
     Returns
     -------
     ProjectConfig
         The parsed project configuration.
-
+    
         If the file does not exist or is empty, returns a default
         configuration.
-
+    
     Raises
     ------
     ImportError

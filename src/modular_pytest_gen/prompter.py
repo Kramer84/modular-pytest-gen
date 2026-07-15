@@ -7,22 +7,22 @@ from . import templates
 class PromptBuilder:
     r"""
     Constructs prompts for LLM test generation.
-
+    
     The `PromptBuilder` class orchestrates the construction of system and
     user prompts for LLM test generation. It formats global context,
     function metadata, and custom instructions into structured prompts that
     guide the LLM in generating appropriate test cases.
-
+    
     Parameters
     ----------
     structured_output : bool, optional
-        Flag to use structured output templates. Default is False.
-
+        Flag to use structured output templates.
+    
     Attributes
     ----------
     structured_output : bool
         Flag indicating whether structured output templates are used.
-
+    
     Methods
     -------
     build_system_prompt :
@@ -33,7 +33,7 @@ class PromptBuilder:
         statements, and custom instructions.
     get_tool_schema :
         Returns the tool schema for LLM test generation.
-
+    
     See Also
     --------
     templates :
@@ -43,20 +43,20 @@ class PromptBuilder:
     def __init__(self, structured_output: bool = False):
         r"""
         Initialize the object with structured output configuration.
-
+        
         Configures the object to produce outputs in a structured format if
         enabled.
-
+        
         Warnings
         --------
         Ensure that the structured output flag is set correctly to avoid
         unexpected output formats.
-
+        
         See Also
         --------
         structured_output :
             Flag indicating whether the output should be structured.
-
+        
         Notes
         -----
         The structured output flag determines the format of the output
@@ -71,13 +71,13 @@ class PromptBuilder:
     ) -> str:
         r"""
         Constructs a system prompt for LLM test generation.
-
+        
         This method dynamically generates a system prompt by integrating
         the fully qualified path of the target object and contextual
         metadata from the global context. The prompt structure varies based
         on the `structured_output` flag, and includes blocks for custom
         exceptions and global constants if available.
-
+        
         Parameters
         ----------
         global_context : Dict[str, Any]
@@ -86,20 +86,20 @@ class PromptBuilder:
         fully_qualified_path : str
             The fully qualified path of the target object for which the
             system prompt is being generated.
-
+        
         Returns
         -------
         str
             The constructed system prompt string, which includes the base
             template and any additional context blocks for exceptions and
             constants.
-
+        
         Raises
         ------
         KeyError
             If the `global_context` dictionary is missing required keys
             such as 'exceptions' or 'constants'.
-
+        
         Warnings
         --------
         Ensure that the `global_context` dictionary contains all necessary
@@ -147,12 +147,12 @@ class PromptBuilder:
     ) -> str:
         r"""
         Constructs a user prompt for LLM test generation.
-
+        
         This method dynamically assembles a prompt by combining static
         templates with function-specific metadata, import statements, and
         optional custom instructions. The resulting prompt provides the LLM
         with comprehensive context for generating accurate unit tests.
-
+        
         Parameters
         ----------
         function_metadata : Dict[str, Any]
@@ -165,14 +165,14 @@ class PromptBuilder:
             function.
         custom_instructions : str, optional
             Optional custom instructions to guide the LLM in test
-            generation.
-
+            generation. Default is .
+        
         Returns
         -------
         str
             The constructed user prompt as a single string, combining all
             provided components and templates.
-
+        
         See Also
         --------
         templates.USER_PROMPT_HEADER :
@@ -231,10 +231,10 @@ class PromptBuilder:
     def get_tool_schema(self) -> Dict[str, Any]:
         r"""
         Retrieve the JSON schema for the pytest generation tool.
-
+        
         This method returns the structured schema definition used by the
         pytest generation tool to validate and process test case inputs.
-
+        
         Returns
         -------
         Dict[str, Any]

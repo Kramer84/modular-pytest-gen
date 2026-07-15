@@ -17,14 +17,14 @@ def clean_app(
 ):
     r"""
     Cleans the workspace by removing temporary directories.
-
+    
     Parameters
     ----------
     config_path : str, optional
         Path to the configuration file. Default is autotest.toml.
     dry_run_dir : str, optional
         Directory containing dry run prompts. Default is dry_run_prompts.
-
+    
     Raises
     ------
     typer.Exit

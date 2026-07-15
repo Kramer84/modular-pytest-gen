@@ -23,22 +23,22 @@ def init_app(
 ):
     r"""
     Generate a new config file for modular pytest & doc gen pipeline.
-
+    
     Creates a default configuration file with inferred values from the
     project structure. If a configuration file already exists, the
     operation will fail unless the force flag is set.
-
+    
     Parameters
     ----------
     force : bool, optional
-        Flag to overwrite existing configuration file
-
+        Flag to overwrite existing configuration file.
+    
     Raises
     ------
     typer.Exit
         Triggered when an existing configuration file is detected and the
-        force flag is not set
-
+        force flag is not set.
+    
     Warnings
     --------
     The configuration file will overwrite any existing file if the force

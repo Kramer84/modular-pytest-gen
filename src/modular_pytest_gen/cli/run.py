@@ -21,12 +21,12 @@ def gather_global_context(
     config: ProjectConfig, resolver: ImportResolver
 ) -> Dict[str, Any]:
     r"""
-    Collects global constants and exceptions from specified files.
-
-    This function aggregates constants and exceptions from files listed in
-    the project configuration. It resolves import paths for exceptions and
-    logs warnings for missing files.
-
+    Aggregates constants and exceptions from project configuration files.
+    
+    This function scans files listed in the project configuration to
+    collect global constants and exceptions. It resolves import paths for
+    exceptions and logs warnings for missing files.
+    
     Parameters
     ----------
     config : ProjectConfig
@@ -34,18 +34,18 @@ def gather_global_context(
     resolver : ImportResolver
         The import resolver used to determine the import paths of
         exceptions.
-
+    
     Returns
     -------
     Dict[str, Any]
         A dictionary containing two keys: 'constants' and 'exceptions'.
-
+    
         The 'constants' key maps to a dictionary of constant names and
         their values.
-
+    
         The 'exceptions' key maps to a list of dictionaries, each
         containing exception details including their import paths.
-
+    
     Warns
     -----
     typer.colors.YELLOW
@@ -127,12 +127,12 @@ def run_app(
 ):
     r"""
     Execute the modular pytest generation pipeline
-
+    
     This function orchestrates the entire test generation workflow, from
     configuration loading to LLM prompt construction and test validation.
     It handles both dry runs and live execution modes, with support for
     class-based test generation and test merging.
-
+    
     Parameters
     ----------
     config_path : str, optional
@@ -148,28 +148,28 @@ def run_app(
         Force test generation even if verified tests already exist. Default
         is False.
     provider : Optional[str], optional
-        LLM Provider override
+        LLM Provider override.
     model : Optional[str], optional
-        Model tag override
+        Model tag override.
     structured : bool, optional
         Force Tool/JSON output mode override. Default is False.
     verbose : bool, optional
         Enable verbose output for debugging. Default is False.
     merge_tests : bool, optional
         Merge generated test files into a single suite. Default is False.
-
+    
     Raises
     ------
     typer.Exit
         Configuration error
-
+    
         Module import failure
-
+    
     Warns
     -----
     typer.colors.YELLOW
         Emitted when a specified global context file is not found
-
+    
     See Also
     --------
     modular_pytest_gen.cli.run.gather_global_context :

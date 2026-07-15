@@ -11,57 +11,62 @@ from typing import Any, Dict, Optional
 class TestValidator:
     r"""
     Validates and heals generated test cases for a target function.
-
+    
     The validator orchestrates a closed-loop validation system that
     executes generated tests, captures tracebacks, and dynamically adjusts
     the LLM's temperature to force creative solutions when tests fail.
-
+    
     Parameters
     ----------
     config : Any
         The configuration object containing project settings.
-
+    
     Attributes
     ----------
     config : Any
         The configuration object containing project settings.
     tmp_dir : Path
         The temporary directory for storing test artifacts.
-
+    
     Methods
     -------
     validate_and_heal :
         Validates and heals generated test cases for a target function.
-
+    
     Raises
     ------
     subprocess.TimeoutExpired
         The pytest execution timed out after 10 seconds.
-
+    
     Warnings
     --------
     The validator may fail to generate valid test cases for complex
     functions.
+    
+    See Also
+    --------
+    pytest :
+        The underlying test framework used for execution.
     """
 
     def __init__(self, config: Any):
         r"""
         Initialize the test runner with configuration.
-
+        
         Sets up the test runner environment using the provided
         configuration object. Creates a temporary directory for test
         execution.
-
+        
         Warnings
         --------
         Ensure the configuration object contains valid layout settings to
         avoid runtime errors.
-
+        
         See Also
         --------
         pytest :
             The underlying test framework used for execution.
-
+        
         Notes
         -----
         The temporary directory path is derived from the `test_root`
@@ -76,23 +81,23 @@ class TestValidator:
     def _extract_json_payload(self, text: str) -> Optional[Dict[str, Any]]:
         r"""
         Extract JSON payload from text
-
+        
         Searches for a JSON object within the provided text and parses it
         into a Python dictionary.
-
+        
         Parameters
         ----------
         text : str
             The input text containing the JSON payload
-
+        
         Returns
         -------
         Optional[Dict[str, Any]]
             The parsed JSON object as a dictionary if found and valid.
-
+        
             Returns `None` if no valid JSON payload is found or if parsing
             fails.
-
+        
         Raises
         ------
         json.JSONDecodeError
@@ -122,11 +127,11 @@ class TestValidator:
     ) -> Optional[str]:
         r"""
         Execute test cases in a controlled environment.
-
+        
         This method orchestrates the closed-loop validation mechanism,
         dynamically adjusting the model's temperature to force creative
         solutions when tests fail.
-
+        
         Parameters
         ----------
         target_file : Path
@@ -150,18 +155,18 @@ class TestValidator:
         max_retries : int
             The maximum number of retries for generating and validating
             test cases. Default is 5.
-
+        
         Returns
         -------
         Optional[str]
             The validated and healed test script if successful, otherwise
             `None`.
-
+        
         Raises
         ------
         subprocess.TimeoutExpired
             If the pytest execution times out.
-
+        
         Warnings
         --------
         This method may trigger multiple retries and temperature

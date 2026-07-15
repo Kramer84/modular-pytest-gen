@@ -90,6 +90,8 @@ Target Implementation:
 
 Internal Dependencies Called:
 {dependency_context}
+
+FINAL INSTRUCTION: Extract the parameters directly from the 'Target Signature' above. Do NOT document the fields of the JSON schema itself.
 """
 AUTODOC_VERIFY_USER = """Analyze the provided implementation against its EXISTING docstring documentation.
 
@@ -109,4 +111,6 @@ Target Implementation:
 
 Existing Docstring to Correct:
 {existing_docstring}
+
+FINAL INSTRUCTION: Your structured JSON output MUST document the 'Target Signature' and 'Target Implementation' above. Do NOT document or repeat the fields of the JSON schema itself.
 """

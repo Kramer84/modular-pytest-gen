@@ -31,7 +31,7 @@ def merge_app(
 ):
     r"""
     Merge temporary test files into the final test suite
-
+    
     Parameters
     ----------
     config_path : str, optional
@@ -40,14 +40,14 @@ def merge_app(
         Directory containing temporary test files
     output_dir : Optional[str], optional
         Final directory to output merged tests
-
+    
     Raises
     ------
     typer.Exit
         Configuration error
-
+    
         Temporary directory does not exist or is not a directory
-
+    
         Merge process failed
     """
 

@@ -23,14 +23,14 @@ def analyze_app(
 ):
     r"""
     Analyze the application's test registry.
-
+    
     Parameters
     ----------
     config_path : str, optional
         Path to the configuration file. Default is autotest.toml.
     verbose : int, optional
         Verbosity level. Default is 0.
-
+    
     Raises
     ------
     Exception

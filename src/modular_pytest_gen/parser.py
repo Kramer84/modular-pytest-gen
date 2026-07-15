@@ -53,20 +53,20 @@ class ModuleParser:
     def __init__(self, file_path: str | Path):
         r"""
         Initialize a code parser with a file path.
-
+        
         Creates a parser instance for the specified file, reads its
         contents, and constructs an Abstract Syntax Tree (AST)
         representation.
-
+        
         Warnings
         --------
         Ensure the file exists and is readable to avoid runtime errors.
-
+        
         See Also
         --------
         ast.parse :
             Standard library function used to generate the AST.
-
+        
         Notes
         -----
         The parser handles both string paths and Path objects for file
@@ -81,18 +81,13 @@ class ModuleParser:
     def parse(self) -> Dict[str, Any]:
         r"""
         Parse the AST tree into a structured metadata dictionary.
-
-        This method processes the Abstract Syntax Tree (AST) of a Python
-        module, extracting and organizing information about imports,
-        constants, exceptions, classes, functions, and methods. It also
-        identifies free-floating code and determines the module's profile.
-
+        
         Returns
         -------
         Dict[str, Any]
             A dictionary containing the parsed metadata with the following
             keys:
-
+        
             - `filename`: The name of the file being parsed.
             - `module_docstring`: The module-level docstring.
             - `dunder_all`: The contents of the `__all__` list if present.
@@ -105,12 +100,12 @@ class ModuleParser:
               with any specific construct.
             - `flags`: A dictionary of flags indicating the presence of
               certain constructs and the module's profile.
-
+        
         Raises
         ------
         AttributeError
             If the AST tree is not properly initialized.
-
+        
         Warnings
         --------
         This method assumes the AST tree is correctly parsed and may
@@ -276,13 +271,13 @@ class ModuleParser:
     ) -> Dict[str, Any]:
         r"""
         Constructs metadata for a target AST node.
-
+        
         This method aggregates structural and contextual information about
         a given AST node, including its dependencies, imports, and local
         context. It is used internally by the AST scanner to provide
         comprehensive metadata for code analysis and documentation
         generation.
-
+        
         Parameters
         ----------
         node : ast.AST
@@ -299,12 +294,12 @@ class ModuleParser:
             The name of the parent class if the node is a method.
         class_methods : Optional[Dict[str, str]], optional
             A dictionary of class methods and their code.
-
+        
         Returns
         -------
         Dict[str, Any]
             A dictionary containing the following keys:
-
+        
             - `name`: The qualified name of the node.
             - `signature`: The signature of the node.
             - `code`: The cleaned-up code of the node.
@@ -314,7 +309,12 @@ class ModuleParser:
             - `local_context_code`: A list of local context code blocks
               used by the node.
             - `used_names`: A list of names used by the node.
-
+        
+        Raises
+        ------
+        Exception
+            Occurs when parsing free-floating or sibling code blocks fails.
+        
         See Also
         --------
         ast.AST :
@@ -428,29 +428,29 @@ class ModuleParser:
     ) -> str:
         r"""
         Extracts the signature string from an AST node.
-
+        
         This method is used internally to generate the signature string for
         a given AST node, which can be a function, async function, or class
         definition. The signature string includes decorators, the node
         name, base classes for classes, arguments for functions, and return
         annotations if present.
-
+        
         Parameters
         ----------
         node : ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
             The AST node from which to extract the signature string.
-
+        
         Returns
         -------
         str
             The signature string of the AST node.
-
+        
             For a class, the string includes the class name and base
             classes.
-
+        
             For a function or async function, the string includes the
             function name, arguments, and return annotation if present.
-
+        
         Raises
         ------
         TypeError
@@ -475,24 +475,24 @@ class ModuleParser:
 
     def _is_main_boilerplate(self, node: ast.If) -> bool:
         r"""
-        Check if ast node is main guard block.
-
+        Determine if an AST node represents a main guard block.
+        
         This method checks if the provided AST node is a conditional
         statement that evaluates whether the script is being run directly
         or imported. It verifies the structure of the node to ensure it
         matches the boilerplate pattern.
-
+        
         Parameters
         ----------
         node : ast.If
             The AST node to be evaluated.
-
+        
         Returns
         -------
         bool
             Returns `True` if the node matches the boilerplate pattern,
             otherwise `False`.
-
+        
         Raises
         ------
         TypeError
@@ -510,21 +510,21 @@ class ModuleParser:
     def _get_node_value(self, node: ast.AST) -> Optional[str]:
         r"""
         Retrieve the string value from an AST node.
-
+        
         This method extracts the string representation of a node's value if
         it is either a variable name or a constant string.
-
+        
         Parameters
         ----------
         node : ast.AST
             The AST node to extract the value from.
-
+        
         Returns
         -------
         Optional[str]
             The string value of the node if it is a variable name or
             constant string, otherwise `None`.
-
+        
         Raises
         ------
         TypeError
@@ -539,25 +539,20 @@ class ModuleParser:
 
     def _determine_profile(self, analysis: Dict[str, Any]) -> str:
         r"""
-        Determine the module profile based on AST analysis results.
-
-        This method evaluates the AST analysis results to classify the
-        module into one of several predefined profiles. The classification
-        is based on the presence and quantity of functions, classes,
-        exceptions, and constants.
-
+        Classify the module profile based on AST analysis.
+        
         Parameters
         ----------
         analysis : Dict[str, Any]
-            A dictionary containing the AST analysis results with keys for
-            functions, classes, exceptions, and constants.
-
+            AST analysis results with keys for functions, classes,
+            exceptions, and constants.
+        
         Returns
         -------
         str
             The determined module profile, which can be one of the
             following:
-
+        
             - `CONSTANT_REGISTRY`: If the module contains only constants.
             - `EXCEPTION_REGISTRY`: If the module contains more exceptions
               than functions and no classes.
@@ -565,7 +560,7 @@ class ModuleParser:
               classes.
             - `COMPLEX_MODULE`: If the module contains classes.
             - `STANDARD_MODULE`: If none of the above conditions are met.
-
+        
         Raises
         ------
         KeyError

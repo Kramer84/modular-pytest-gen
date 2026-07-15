@@ -7,16 +7,16 @@ from .config import ProjectConfig
 class LayoutManager:
     r"""
     Construct a LayoutManager instance.
-
+    
     Initializes the LayoutManager with a ProjectConfig object to manage
     test file paths based on project configuration.
-
+    
     Parameters
     ----------
     config : ProjectConfig
         The project configuration object containing layout strategy and
         structure settings.
-
+    
     Methods
     -------
     get_test_file_path :
@@ -27,20 +27,20 @@ class LayoutManager:
     def __init__(self, config: ProjectConfig):
         r"""
         Initialize the project configuration.
-
+        
         Sets up the project configuration by storing the provided
         `ProjectConfig` object.
-
+        
         Warnings
         --------
         Ensure the `ProjectConfig` object is valid and contains all
         necessary configuration parameters.
-
+        
         See Also
         --------
         ProjectConfig :
             The configuration object used to initialize the project.
-
+        
         Notes
         -----
         The `ProjectConfig` object must be properly initialized before
@@ -51,30 +51,24 @@ class LayoutManager:
 
     def get_test_file_path(self, source_file_path: Union[str, Path]) -> Path:
         r"""
-        Compute test file path from source file path and config.
-
-        This method generates the appropriate test file path by analyzing
-        the source file path and applying the configured layout strategy
-        and structure. It ensures the source file is a Python file and
-        handles different layout strategies and structures to determine the
-        correct test file path.
-
+        Generate test file path from source file path and configuration.
+        
         Parameters
         ----------
         source_file_path : Union[str, Path]
             The path to the source file for which the test file path is to
             be generated.
-
+        
         Returns
         -------
         Path
             The generated test file path as a Path object.
-
+        
         Raises
         ------
         ValueError
             If the source file path is not a Python file.
-
+        
             If the layout strategy or structure is unknown.
         """
 

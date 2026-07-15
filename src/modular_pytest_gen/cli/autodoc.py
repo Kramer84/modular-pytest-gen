@@ -26,17 +26,19 @@ from ..resolver import ImportResolver
 def get_schema_model(target_type: str):
     r"""
     Retrieve the schema model for the specified target type.
-
+    
     Parameters
     ----------
     target_type : {'function', 'class', 'method', 'init_method', 'constant'}
         The type of schema model to retrieve.
-
+    
     Returns
     -------
     Type[BaseModel]
-        The schema model corresponding to the target type. Defaults to
-        `FunctionDocstringSchema` if the target type is not found.
+        The schema model corresponding to the target type.
+    
+        Defaults to `FunctionDocstringSchema` if the target type is not
+        found.
     """
 
     mapping = {
@@ -52,17 +54,19 @@ def get_schema_model(target_type: str):
 def get_autodoc_tool_schema(target_type: str) -> dict:
     r"""
     Retrieve the schema model for the specified target type.
-
+    
     Parameters
     ----------
     target_type : {'function', 'class', 'method', 'init_method', 'constant'}
         The type of schema model to retrieve.
-
+    
     Returns
     -------
     dict
-        The schema model corresponding to the target type. Defaults to
-        `FunctionDocstringSchema` if the target type is not found.
+        The schema model corresponding to the target type.
+    
+        Defaults to `FunctionDocstringSchema` if the target type is not
+        found.
     """
 
     model = get_schema_model(target_type)
@@ -124,12 +128,12 @@ def autodoc_app(
 ):
     r"""
     Generate NumPy-compliant docstrings for Python code
-
+    
     This application processes Python source files to generate or verify
     NumPy-compliant docstrings. It supports both function and class
     documentation, with optional LLM-generated examples and dependency
     context.
-
+    
     Parameters
     ----------
     config_path : str, optional
@@ -150,14 +154,14 @@ def autodoc_app(
         Enable verbose logging
     title_model : str, optional
         Secondary model for title compression
-
+    
     Raises
     ------
     typer.Exit
         When the mode is invalid
-
+    
         When configuration loading fails
-
+    
     See Also
     --------
     modular_pytest_gen.cli.autodoc.get_autodoc_tool_schema :
@@ -339,7 +343,7 @@ def autodoc_app(
             continue
         try:
             raw_response = client.generate_test(
-                system_prompt, user_prompt, temperature=0.05, tool_schema=tool_schema
+                system_prompt, user_prompt, temperature=0.001, tool_schema=tool_schema
             )
             if verbose:
                 typer.secho("\n[DEBUG] --- RAW LLM RESPONSE ---", fg=typer.colors.CYAN)
