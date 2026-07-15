@@ -1,11 +1,22 @@
 import re
 import textwrap
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
 
 class DeprecationDetail(BaseModel):
+    r"""
+    Represents a deprecation notice with version and message.
+
+    Parameters
+    ----------
+    version : str
+        The version in which the feature was deprecated.
+    message : str
+        The explanation and alternative migration path.
+    """
+
     version: str = Field(
         ..., description="The version in which the feature was deprecated."
     )
@@ -15,6 +26,57 @@ class DeprecationDetail(BaseModel):
 
 
 class ParameterDetail(BaseModel):
+    r"""
+    Define a parameter's metadata for docstring generation.
+
+    This class encapsulates all necessary details for constructing a
+    parameter description in a NumPy-compliant docstring. It includes type
+    information, optional status, default values, and allowed choices.
+
+    Parameters
+    ----------
+    name : str
+        The name of the parameter as it appears in the function signature.
+    type_hint : str, optional
+        The string representation of the parameter's type hint. Default is
+        None.
+    description : str, optional
+        A concise description of the parameter's purpose. Default is None.
+    is_optional : bool, optional
+        Indicates whether the parameter is optional. Default is False.
+    default_value : Any, optional
+        The default value of the parameter if it is optional. Default is
+        None.
+    choices : List[str], optional
+        A list of allowed values for the parameter if it is constrained.
+        Default is None.
+
+    Attributes
+    ----------
+    name : str
+        The name of the parameter.
+    type_hint : str
+        The type hint of the parameter.
+    description : str
+        The description of the parameter.
+    is_optional : bool
+        Whether the parameter is optional.
+    default_value : Any
+        The default value of the parameter.
+    choices : List[str]
+        The allowed values for the parameter.
+
+    Methods
+    -------
+    model_dump :
+        Convert the model instance to a dictionary.
+
+    See Also
+    --------
+    ClassDocstringSchema :
+        The schema used to generate the docstring for a class.
+    """
+
     name: str
     type_hint: str = Field(
         description="The string representation of the type hint (e.g., 'list[str]' or 'int')."
@@ -23,7 +85,10 @@ class ParameterDetail(BaseModel):
         description="A concise definition of the parameter (1 sentence maximum). Do not explain why it is used. DO NOT mention default values here; they are appended automatically."
     )
     is_optional: bool = False
-    default_value: Optional[str] = None
+    default_value: Any = Field(
+        default=None,
+        description="The default value. Can be a string, boolean, or number.",
+    )
     choices: List[str] = Field(
         default_factory=list,
         description="Allowed values, mapping to Literal or NumPy set notation. Default value first.",
@@ -31,6 +96,22 @@ class ParameterDetail(BaseModel):
 
 
 class ReturnDetail(BaseModel):
+    r"""
+    Define a named return value with its type and description.
+
+    This class is used to document the return values of functions,
+    including optional named returns.
+
+    Parameters
+    ----------
+    name : Optional[str], optional
+        The name of the return value. Default is None.
+    type_hint : str
+        The string representation of the type hint.
+    description : List[str]
+        The description of the return value.
+    """
+
     name: Optional[str] = Field(
         None, description="Optionally named return values allowed."
     )
@@ -41,6 +122,17 @@ class ReturnDetail(BaseModel):
 
 
 class SeeAlsoItem(BaseModel):
+    r"""
+    Create a reference to another function or object.
+
+    Parameters
+    ----------
+    name : str
+        The fully qualified name of the related function or object.
+    description : Optional[str], optional
+        An optional short description of the relationship.
+    """
+
     name: str = Field(
         ..., description="The fully qualified name of the related function/object."
     )
@@ -60,11 +152,44 @@ class ExceptionDetail(BaseModel):
 
 
 class RoutineListingItem(BaseModel):
+    r"""
+    Represents a routine in a listing.
+
+    Parameters
+    ----------
+    name : str
+        The name of the routine (function or class).
+    description : str
+        A short summary of the routine.
+    """
+
     name: str = Field(..., description="Name of the routine (function or class).")
     description: str = Field(..., description="Short summary of the routine.")
 
 
 class CoreNumPyDocstringSchema(BaseModel):
+    r"""
+    Define the schema for NumPy-compliant docstring components.
+
+    This class serves as the foundational schema for generating
+    NumPy-compliant docstrings. It encapsulates all the necessary fields
+    required to construct a comprehensive and standardized documentation
+    structure.
+
+    Parameters
+    ----------
+    short_summary : str
+        A brief, imperative summary that does not include variable names or
+        the function name.
+    deprecation : Optional[DeprecationDetail], optional
+        Details about the deprecation of the feature, including the version
+        and a message explaining the alternative. Default is None.
+    extended_summary : Optional[str], optional
+        Provides additional context and clarification about the
+        functionality without delving into implementation details or
+        theoretical aspects. Default is None.
+    """
+
     short_summary: str = Field(
         ...,
         description="Short, imperative summary not using variable names or the function name.",
@@ -77,6 +202,48 @@ class CoreNumPyDocstringSchema(BaseModel):
 
 
 class BaseNumPyDocstringSchema(CoreNumPyDocstringSchema):
+    r"""
+    Define the schema for NumPy-compliant docstring components.
+
+    This class serves as the foundational schema for generating
+    NumPy-compliant docstrings. It encapsulates all the necessary fields
+    required to construct a comprehensive and standardized documentation
+    structure.
+
+    Parameters
+    ----------
+    short_summary : str
+        A brief, imperative summary that does not include variable names or
+        the function name.
+    deprecation : Optional[DeprecationDetail], optional
+        Details about the deprecation of the feature, including the version
+        and a message explaining the alternative.
+    extended_summary : Optional[str], optional
+        Provides additional context and clarification about the
+        functionality without delving into implementation details or
+        theoretical aspects.
+
+    Attributes
+    ----------
+    see_also : List[SeeAlsoItem]
+        References to other codes. Optional. Never put references to the
+        standard library or well known tools.
+    references : List[str]
+        Publications or source documentation citations if provided.
+        Optional. Do NOT include the '.. [x]' numbering prefix.
+    examples : List[str]
+        Doctest-style lines execution examples (>>>).
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    modular_pytest_gen.docstring.SeeAlsoItem :
+        References to other functions or objects.
+    """
+
     see_also: List[SeeAlsoItem] = Field(
         default_factory=list,
         description="References to other codes. Optional. Never put references to the standard library or well known tools.",
@@ -92,6 +259,53 @@ class BaseNumPyDocstringSchema(CoreNumPyDocstringSchema):
 
 
 class FunctionDocstringSchema(BaseNumPyDocstringSchema):
+    r"""
+    Define numpy-compliant docstring components schema.
+
+    This class serves as the foundational schema for generating
+    NumPy-compliant docstrings for functions. It encapsulates all the
+    necessary fields required to construct a comprehensive and standardized
+    documentation structure.
+
+    Parameters
+    ----------
+    short_summary : str
+        A brief, imperative summary that does not include variable names or
+        the function name.
+    deprecation : Optional[DeprecationDetail], optional
+        Details about the deprecation of the feature, including the version
+        and a message explaining the alternative.
+    extended_summary : Optional[str], optional
+        Provides additional context and clarification about the
+        functionality without delving into implementation details or
+        theoretical aspects.
+
+    Attributes
+    ----------
+    see_also : List[SeeAlsoItem]
+        References to other codes. Optional. Never put references to the
+        standard library or well known tools.
+    references : List[str]
+        Publications or source documentation citations if provided.
+        Optional. Do NOT include the '.. [x]' numbering prefix.
+    examples : List[str]
+        Doctest-style lines execution examples (>>>).
+
+    Methods
+    -------
+    model_dump :
+        Convert the model instance to a dictionary.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    modular_pytest_gen.docstring.SeeAlsoItem :
+        References to other functions or objects.
+    """
+
     parameters: List[ParameterDetail] = Field(default_factory=list)
     returns: Optional[ReturnDetail] = None
     yields: Optional[ReturnDetail] = Field(
@@ -116,6 +330,53 @@ class FunctionDocstringSchema(BaseNumPyDocstringSchema):
 
 
 class MethodDocstringSchema(FunctionDocstringSchema):
+    r"""
+    Define numpy-compliant docstring components schema.
+
+    This class serves as the foundational schema for generating
+    NumPy-compliant docstrings for methods. It encapsulates all the
+    necessary fields required to construct a comprehensive and standardized
+    documentation structure.
+
+    Parameters
+    ----------
+    short_summary : str
+        A brief, imperative summary that does not include variable names or
+        the function name.
+    deprecation : Optional[DeprecationDetail], optional
+        Details about the deprecation of the feature, including the version
+        and a message explaining the alternative.
+    extended_summary : Optional[str], optional
+        Provides additional context and clarification about the
+        functionality without delving into implementation details or
+        theoretical aspects.
+
+    Attributes
+    ----------
+    see_also : List[SeeAlsoItem]
+        References to other codes. Optional. Never put references to the
+        standard library or well known tools.
+    references : List[str]
+        Publications or source documentation citations if provided.
+        Optional. Do NOT include the '.. [x]' numbering prefix.
+    examples : List[str]
+        Doctest-style lines execution examples (>>>).
+
+    Methods
+    -------
+    model_dump :
+        Convert the model instance to a dictionary.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    modular_pytest_gen.docstring.SeeAlsoItem :
+        References to other functions or objects.
+    """
+
     parameters: List[ParameterDetail] = Field(
         default_factory=list,
         description="Arguments for the method. Do NOT include 'self' in the parameter list.",
@@ -123,6 +384,47 @@ class MethodDocstringSchema(FunctionDocstringSchema):
 
 
 class ClassDocstringSchema(BaseNumPyDocstringSchema):
+    r"""
+    Define the schema for class docstring components.
+
+    This class extends the base schema to include class-specific fields
+    such as parameters, attributes, methods, and other parameters.
+
+    Parameters
+    ----------
+    parameters : List[ParameterDetail]
+        Constructor arguments. Do NOT include 'self'.
+    attributes : List[ParameterDetail]
+        Non-method variables.
+    methods : List[SeeAlsoItem]
+        Summary of the public API. Never include private methods starting
+        with '_'.
+    other_parameters : List[ParameterDetail]
+        Infrequently used keywords.
+    raises : List[ExceptionDetail]
+        Exceptions that may be raised.
+    warns : List[ExceptionDetail]
+        Warnings that may be issued.
+    warnings : Optional[str], optional
+        Free-text area for highly critical user cautions.
+    notes : Optional[List[str]], optional
+        Theory, math or algorithm discussion. Each list item represents a
+        new paragraph, a directive, or equation.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.BaseNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The core schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    modular_pytest_gen.docstring.ParameterDetail :
+        Details about the parameters of the class.
+    modular_pytest_gen.docstring.SeeAlsoItem :
+        References to other functions or objects.
+    """
+
     parameters: List[ParameterDetail] = Field(
         default_factory=list,
         description="Constructor arguments. Do NOT include 'self'.",
@@ -149,6 +451,31 @@ class ClassDocstringSchema(BaseNumPyDocstringSchema):
 
 
 class InitMethodDocstringSchema(BaseNumPyDocstringSchema):
+    r"""
+    Define the schema for NumPy-compliant docstring components.
+
+    This class serves as the foundational schema for generating
+    NumPy-compliant docstrings. It encapsulates all the necessary fields
+    required to construct a comprehensive and standardized documentation
+    structure.
+
+    Attributes
+    ----------
+    notes : Optional[List[str]], optional
+        Theory, math or algorithm discussion.
+    warnings : Optional[str], optional
+        Free-text area for highly critical user cautions.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    modular_pytest_gen.docstring.SeeAlsoItem :
+        References to other functions or objects.
+    """
+
     notes: Optional[List[str]] = Field(
         default=None, description="Theory, math or algorithm discussion."
     )
@@ -158,6 +485,29 @@ class InitMethodDocstringSchema(BaseNumPyDocstringSchema):
 
 
 class ModuleDocstringSchema(BaseNumPyDocstringSchema):
+    r"""
+    Define the schema for module-level docstrings.
+
+    This class extends the base schema to include module-specific fields
+    such as routine listings and notes.
+
+    Parameters
+    ----------
+    routine_listings : List[RoutineListingItem], optional
+        Listings of classes and functions. Encouraged for large modules.
+        Default is list.
+    notes : Optional[List[str]], optional
+        Theory, math or algorithm discussion. Do NOT include author or
+        license information here. Default is None.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.BaseNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.RoutineListingItem :
+        Represents a routine in a listing.
+    """
+
     routine_listings: List[RoutineListingItem] = Field(
         default_factory=list,
         description="Listings of classes and functions. Encouraged for large modules.",
@@ -169,6 +519,22 @@ class ModuleDocstringSchema(BaseNumPyDocstringSchema):
 
 
 class ConstantDocstringSchema(CoreNumPyDocstringSchema):
+    r"""
+    Define the schema for constant docstring components.
+
+    Clarifies functionality. ONLY populate this if the constant's value
+    derives from a complex formula, has non-obvious side effects, or
+    requires specific domain context not apparent from its name. Do not
+    exceed 1-2 sentences.
+
+    See Also
+    --------
+    modular_pytest_gen.docstring.CoreNumPyDocstringSchema :
+        The base schema for NumPy-compliant docstrings.
+    modular_pytest_gen.docstring.DeprecationDetail :
+        Details about the deprecation of the feature.
+    """
+
     extended_summary: Optional[str] = Field(
         None,
         description=(
@@ -182,6 +548,43 @@ class ConstantDocstringSchema(CoreNumPyDocstringSchema):
 def smart_wrap(
     text_segments: Union[List[str], str], wrapper: textwrap.TextWrapper
 ) -> List[str]:
+    r"""
+    Wrap text segments with special handling.
+
+    This function processes text segments to apply custom wrapping rules
+    for Sphinx/reST directives, bullet points, and mathematical
+    expressions. It ensures proper formatting while preserving the
+    structure of the original content.
+
+    Parameters
+    ----------
+    text_segments : Union[List[str], str]
+        The text segments to be wrapped. Can be a single string or a list
+        of strings.
+    wrapper : textwrap.TextWrapper
+        The TextWrapper instance used to wrap the text segments.
+
+    Returns
+    -------
+    List[str]
+        The wrapped text segments as a list of strings.
+
+        Each string represents a line of wrapped text with proper
+        formatting for directives, bullets, and math expressions.
+
+    Raises
+    ------
+    TypeError
+        If `text_segments` is not a string or a list of strings.
+
+        If `wrapper` is not an instance of `textwrap.TextWrapper`.
+
+    Warnings
+    --------
+    This function does not handle nested directives or complex mathematical
+    expressions. Ensure the input text segments are properly formatted for
+    optimal results.
+    """
 
     if not text_segments:
         return []
@@ -220,6 +623,42 @@ def smart_wrap(
 def build_numpy_docstring(
     schema: "BaseNumPyDocstringSchema", base_indent: int = 4, max_line_length: int = 75
 ) -> str:
+    r"""
+    Construct a NumPy-compliant docstring from a schema.
+
+    This function generates a properly formatted docstring by processing
+    the provided schema and applying text wrapping rules to ensure
+    compliance with NumPy standards.
+
+    Parameters
+    ----------
+    schema : BaseNumPyDocstringSchema
+        The schema containing the docstring components.
+    base_indent : int, optional
+        The number of spaces to indent the docstring.
+    max_line_length : int, optional
+        The maximum line length for the docstring.
+
+    Returns
+    -------
+    str
+        The generated NumPy-compliant docstring.
+
+        If the schema is empty, returns an empty docstring.
+
+    Raises
+    ------
+    TypeError
+        If `schema` is not an instance of `BaseNumPyDocstringSchema`.
+
+        If `base_indent` or `max_line_length` are not integers.
+
+    Warnings
+    --------
+    This function does not handle nested directives or complex mathematical
+    expressions. Ensure the input schema is properly formatted for optimal
+    results.
+    """
 
     indent = " " * base_indent
     content_width = max_line_length - base_indent

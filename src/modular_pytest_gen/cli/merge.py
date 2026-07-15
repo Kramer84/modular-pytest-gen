@@ -29,6 +29,27 @@ def merge_app(
         ),
     ] = None,
 ):
+    r"""
+    Merge temporary test files into the final test suite
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration file. Default is autotest.toml.
+    tmp_dir : Optional[str], optional
+        Directory containing temporary test files
+    output_dir : Optional[str], optional
+        Final directory to output merged tests
+
+    Raises
+    ------
+    typer.Exit
+        Configuration error
+
+        Temporary directory does not exist or is not a directory
+
+        Merge process failed
+    """
 
     try:
         config = load_config(config_path)

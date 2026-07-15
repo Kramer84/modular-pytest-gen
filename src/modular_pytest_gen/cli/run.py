@@ -20,6 +20,37 @@ from ..validator import TestValidator
 def gather_global_context(
     config: ProjectConfig, resolver: ImportResolver
 ) -> Dict[str, Any]:
+    r"""
+    Collects global constants and exceptions from specified files.
+
+    This function aggregates constants and exceptions from files listed in
+    the project configuration. It resolves import paths for exceptions and
+    logs warnings for missing files.
+
+    Parameters
+    ----------
+    config : ProjectConfig
+        The project configuration containing paths to global context files.
+    resolver : ImportResolver
+        The import resolver used to determine the import paths of
+        exceptions.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing two keys: 'constants' and 'exceptions'.
+
+        The 'constants' key maps to a dictionary of constant names and
+        their values.
+
+        The 'exceptions' key maps to a list of dictionaries, each
+        containing exception details including their import paths.
+
+    Warns
+    -----
+    typer.colors.YELLOW
+        Emitted when a specified global context file is not found.
+    """
 
     context: Dict[str, Any] = {"constants": {}, "exceptions": []}
     for file_path in config.global_context:
@@ -94,6 +125,56 @@ def run_app(
         ),
     ] = False,
 ):
+    r"""
+    Execute the modular pytest generation pipeline
+
+    This function orchestrates the entire test generation workflow, from
+    configuration loading to LLM prompt construction and test validation.
+    It handles both dry runs and live execution modes, with support for
+    class-based test generation and test merging.
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration file. Default is autotest.toml.
+    dry_run : bool, optional
+        Generate prompt Markdowns instead of calling the LLM. Default is
+        False.
+    include_classes : bool, optional
+        Generate tests for classes as well as functions. Default is False.
+    max_class_lines : int, optional
+        Skip classes larger than this many lines. Default is 300.
+    force : bool, optional
+        Force test generation even if verified tests already exist. Default
+        is False.
+    provider : Optional[str], optional
+        LLM Provider override
+    model : Optional[str], optional
+        Model tag override
+    structured : bool, optional
+        Force Tool/JSON output mode override. Default is False.
+    verbose : bool, optional
+        Enable verbose output for debugging. Default is False.
+    merge_tests : bool, optional
+        Merge generated test files into a single suite. Default is False.
+
+    Raises
+    ------
+    typer.Exit
+        Configuration error
+
+        Module import failure
+
+    Warns
+    -----
+    typer.colors.YELLOW
+        Emitted when a specified global context file is not found
+
+    See Also
+    --------
+    modular_pytest_gen.cli.run.gather_global_context :
+        Collects global constants and exceptions from specified files
+    """
 
     try:
         config = load_config(config_path)
@@ -208,7 +289,7 @@ def run_app(
             if not targets_to_test:
                 continue
             for target in targets_to_test:
-                if target["name"] in config.discovery.exclude_functions:
+                if target["name"] in config.discovery.exclude_nodes:
                     typer.echo(f"  -> Skipping target: {target['name']} (Blacklisted)")
                     continue
                 if not force:
@@ -302,8 +383,8 @@ def run_app(
                     dry_dir.mkdir(exist_ok=True)
                     md_path = dry_dir / f"{target_file.stem}_{target['name']}.md"
                     with open(md_path, "w", encoding="utf-8") as f:
-                        f.write(f"# System Prompt\n\n```text\n{system_prompt}\n```\n\n")
-                        f.write(f"# User Prompt\n\n```text\n{user_prompt}\n```\n\n")
+                        f.write(f"# System Prompt\n\n{system_prompt}\n\n")
+                        f.write(f"# User Prompt\n\n{user_prompt}\n\n")
                         if tool_schema:
                             import json
 
@@ -322,6 +403,7 @@ def run_app(
                     function_import_statement=function_import_statement,
                     client=client,
                     tool_schema=tool_schema,
+                    max_retries=3
                 )
         if not dry_run and merge_tests:
             typer.echo("\n==============================================")

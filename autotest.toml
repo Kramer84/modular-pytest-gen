@@ -8,7 +8,8 @@ custom_instructions = ""
 [layout]
 strategy = "external" 
 structure = "nested"  
-test_root = "tests"
+test_root = "tests/generated/"
+granularity = "function"
 
 [discovery]
 respect_dunder_all = true
@@ -18,12 +19,33 @@ exclude_patterns = [
     "*__init__.py",
     "build",
     "tests",
-    "*test_*.py"
+    "*test_*.py",
+    "cli",
+    "templates",
 ]
-exclude_functions = []
+exclude_nodes = [
+    "TestGenerationLayoutConfig",
+    "DiscoveryConfig",
+    "LLMConfig",
+    "ProjectConfig",
+    "DeprecationDetail",
+    "ParameterDetail",
+    "ReturnDetail",
+    "SeeAlsoItem",
+    "ExceptionDetail",
+    "RoutineListingItem",
+    "CoreNumPyDocstringSchema",
+    "BaseNumPyDocstringSchema",
+    "FunctionDocstringSchema",
+    "MethodDocstringSchema",
+    "ClassDocstringSchema",
+    "InitMethodDocstringSchema",
+    "ModuleDocstringSchema",
+    "ConstantDocstringSchema",
+]
 
 [llm]
 provider = "mistral"
 model = "codestral-latest"
 host = "https://api.mistral.ai"
-structured = false
+structured = true

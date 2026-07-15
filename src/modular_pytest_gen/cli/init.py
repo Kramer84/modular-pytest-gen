@@ -21,6 +21,29 @@ def init_app(
         ),
     ] = False,
 ):
+    r"""
+    Generate a new config file for modular pytest & doc gen pipeline.
+
+    Creates a default configuration file with inferred values from the
+    project structure. If a configuration file already exists, the
+    operation will fail unless the force flag is set.
+
+    Parameters
+    ----------
+    force : bool, optional
+        Flag to overwrite existing configuration file
+
+    Raises
+    ------
+    typer.Exit
+        Triggered when an existing configuration file is detected and the
+        force flag is not set
+
+    Warnings
+    --------
+    The configuration file will overwrite any existing file if the force
+    flag is set.
+    """
 
     config_path = Path("autotest.toml")
     if config_path.exists() and (not force):
@@ -67,7 +90,37 @@ def init_app(
                 f"[WARN] Failed to parse pyproject.toml for inference: {e}",
                 fg=typer.colors.YELLOW,
             )
-    template = f'# autotest.toml - Modular Pytest Gen Configuration\n\nsource_root = "{source_root}"\nimport_prefix = "{import_prefix}"\nglobal_context = []\ncustom_instructions = ""\n\n[layout]\nstrategy = "external" \nstructure = "nested"  \ntest_root = "tests"\n\n[discovery]\nrespect_dunder_all = true\ninclude_classes = true\nmax_class_lines = 300\nexclude_patterns = [\n    "*__init__.py",\n    "build",\n    "tests",\n    "*test_*.py"\n]\nexclude_functions = []\n\n[llm]\nprovider = "ollama"\nmodel = "qwen2.5-coder:7b-instruct-q8_0"\nhost = "http://localhost:11434"\nstructured = false\n'
+    template = f"""# autotest.toml - Modular Pytest Gen Configuration
+
+source_root = "{source_root}"
+import_prefix = "{import_prefix}"
+global_context = []
+custom_instructions = ""
+
+[layout]
+strategy = "external" 
+structure = "nested"  
+test_root = "tests"
+granularity = "function"
+
+[discovery]
+respect_dunder_all = true
+include_classes = true
+max_class_lines = 300
+exclude_patterns = [
+    "*__init__.py",
+    "build",
+    "tests",
+    "*test_*.py"
+]
+exclude_nodes = []
+
+[llm]
+provider = "mistral"
+model = "codestral-latest"
+host = "https://api.mistral.ai"
+structured = false
+    """
     config_path.write_text(template, encoding="utf-8")
     typer.secho(
         "[SUCCESS] Initialized autotest.toml with inferred defaults.",

@@ -9,12 +9,22 @@ from .config import (
     load_config,
 )
 from .docstring import (
+    BaseNumPyDocstringSchema,
     ClassDocstringSchema,
     ConstantDocstringSchema,
+    CoreNumPyDocstringSchema,
+    DeprecationDetail,
+    ExceptionDetail,
     FunctionDocstringSchema,
     InitMethodDocstringSchema,
     MethodDocstringSchema,
+    ModuleDocstringSchema,
+    ParameterDetail,
+    ReturnDetail,
+    RoutineListingItem,
+    SeeAlsoItem,
     build_numpy_docstring,
+    smart_wrap,
 )
 from .graph import DependencyGraph
 from .injector import AutodocInjector, inject_autodoc
@@ -35,12 +45,10 @@ from .templates import (
     SYSTEM_PROMPT_STRUCTURED,
     USER_PROMPT_BASE,
     USER_PROMPT_DIRECTIVES,
-    USER_PROMPT_DOCSTRING,
     USER_PROMPT_FOOTER,
     USER_PROMPT_HEADER,
     USER_PROMPT_IMPORTS,
     USER_PROMPT_LOCAL_CONTEXT,
-    USER_PROMPT_SIGNATURE,
 )
 from .validator import TestValidator
 
@@ -56,10 +64,19 @@ __all__ = [
     "ProjectConfig",
     "load_config",
     "DeprecationDetail",
-    "NumpyDocstringSchema",
     "ParameterDetail",
     "ReturnDetail",
     "SeeAlsoItem",
+    "ExceptionDetail",
+    "RoutineListingItem",
+    "CoreNumPyDocstringSchema",
+    "BaseNumPyDocstringSchema",
+    "FunctionDocstringSchema",
+    "MethodDocstringSchema",
+    "ClassDocstringSchema",
+    "InitMethodDocstringSchema",
+    "ModuleDocstringSchema",
+    "ConstantDocstringSchema",
     "build_numpy_docstring",
     "smart_wrap",
     "DependencyGraph",
@@ -81,11 +98,9 @@ __all__ = [
     "SYSTEM_PROMPT_STRUCTURED",
     "USER_PROMPT_BASE",
     "USER_PROMPT_DIRECTIVES",
-    "USER_PROMPT_DOCSTRING",
     "USER_PROMPT_FOOTER",
     "USER_PROMPT_HEADER",
     "USER_PROMPT_IMPORTS",
     "USER_PROMPT_LOCAL_CONTEXT",
-    "USER_PROMPT_SIGNATURE",
     "TestValidator",
 ]

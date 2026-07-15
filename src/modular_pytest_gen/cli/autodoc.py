@@ -24,6 +24,20 @@ from ..resolver import ImportResolver
 
 
 def get_schema_model(target_type: str):
+    r"""
+    Retrieve the schema model for the specified target type.
+
+    Parameters
+    ----------
+    target_type : {'function', 'class', 'method', 'init_method', 'constant'}
+        The type of schema model to retrieve.
+
+    Returns
+    -------
+    Type[BaseModel]
+        The schema model corresponding to the target type. Defaults to
+        `FunctionDocstringSchema` if the target type is not found.
+    """
 
     mapping = {
         "function": FunctionDocstringSchema,
@@ -36,6 +50,20 @@ def get_schema_model(target_type: str):
 
 
 def get_autodoc_tool_schema(target_type: str) -> dict:
+    r"""
+    Retrieve the schema model for the specified target type.
+
+    Parameters
+    ----------
+    target_type : {'function', 'class', 'method', 'init_method', 'constant'}
+        The type of schema model to retrieve.
+
+    Returns
+    -------
+    dict
+        The schema model corresponding to the target type. Defaults to
+        `FunctionDocstringSchema` if the target type is not found.
+    """
 
     model = get_schema_model(target_type)
     if hasattr(model, "model_json_schema"):
@@ -94,6 +122,49 @@ def autodoc_app(
         ),
     ] = "llama3.1:8B",
 ):
+    r"""
+    Generate NumPy-compliant docstrings for Python code
+
+    This application processes Python source files to generate or verify
+    NumPy-compliant docstrings. It supports both function and class
+    documentation, with optional LLM-generated examples and dependency
+    context.
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration file
+    mode : {'generate', 'verify'}, optional
+        Operation mode
+    examples : bool, optional
+        Flag to force example generation
+    dry_run : bool, optional
+        Flag to run without LLM calls
+    output_dir : str, optional
+        Directory for output files
+    provider : str, optional
+        LLM provider override
+    model : str, optional
+        Model tag override
+    verbose : bool, optional
+        Enable verbose logging
+    title_model : str, optional
+        Secondary model for title compression
+
+    Raises
+    ------
+    typer.Exit
+        When the mode is invalid
+
+        When configuration loading fails
+
+    See Also
+    --------
+    modular_pytest_gen.cli.autodoc.get_autodoc_tool_schema :
+        Retrieves the schema model for the specified target type
+    modular_pytest_gen.cli.autodoc.get_schema_model :
+        Retrieves the schema model for the specified target type
+    """
 
     if mode not in ["generate", "verify"]:
         typer.secho("Mode must be 'generate' or 'verify'.", fg=typer.colors.RED)

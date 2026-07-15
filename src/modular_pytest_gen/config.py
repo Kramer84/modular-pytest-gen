@@ -14,6 +14,24 @@ else:
 
 @dataclass
 class TestGenerationLayoutConfig:
+    r"""
+    Configure test generation layout strategy.
+
+    Defines the directory structure and granularity for generated test
+    files.
+
+    Parameters
+    ----------
+    strategy : {'external', 'adjacent'}, optional
+        The directory layout strategy. Default is external.
+    structure : {'nested', 'flat'}, optional
+        The nesting strategy for test files. Default is nested.
+    test_root : str, optional
+        The root directory for test files. Default is tests.
+    granularity : {'function', 'class', 'module'}, optional
+        The granularity level for test generation. Default is function.
+    """
+
     strategy: Literal["external", "adjacent"] = "external"
     structure: Literal["nested", "flat"] = "nested"
     test_root: str = "tests"
@@ -22,25 +40,119 @@ class TestGenerationLayoutConfig:
 
 @dataclass
 class DiscoveryConfig:
+    r"""
+    Configure test discovery and generation behavior.
+
+    The DiscoveryConfig class encapsulates settings that control how the
+    AST scanner identifies and processes code elements for test generation.
+    It allows fine-grained control over which modules, classes, and
+    functions are included or excluded from the test generation process.
+
+    Parameters
+    ----------
+    respect_dunder_all : bool, optional
+        Whether to respect the `__all__` attribute in modules when
+        determining which names to include. Default is True.
+    exclude_patterns : List[str], optional
+        Glob patterns for files or directories to exclude from test
+        generation. Default is ['*__init__.py', 'build', 'tests',
+        '*test_*.py'].
+    exclude_nodes : List[str], optional
+        Names of functions to exclude from test generation. Default is [].
+    include_classes : bool, optional
+        Whether to include classes in the test generation process. Default
+        is False.
+    max_class_lines : int, optional
+        Maximum number of lines a class can have to be included in test
+        generation. Default is 300.
+
+    See Also
+    --------
+    ast_scanner :
+        The module responsible for scanning and parsing the AST of Python
+        code.
+    test_generator :
+        The module responsible for generating unit tests based on the
+        discovered code elements.
+    """
+
     respect_dunder_all: bool = True
     exclude_patterns: List[str] = field(
         default_factory=lambda: ["*__init__.py", "build", "tests", "*test_*.py"]
     )
-    exclude_functions: List[str] = field(default_factory=list)
+    exclude_nodes: List[str] = field(default_factory=list)
     include_classes: bool = False
     max_class_lines: int = 300
 
 
 @dataclass
 class LLMConfig:
-    provider: Literal["ollama", "mistral"] = "ollama"
-    model: str = "qwen2.5-coder:7b-instruct-q8_0"
-    host: str = "http://localhost:11434"
+    r"""
+    Configure the LLM provider and model.
+
+    This class encapsulates the configuration settings for the LLM
+    provider, including the model name, host URL, and whether structured
+    output is enabled.
+
+    Parameters
+    ----------
+    provider : {'mistral', 'ollama'}, optional
+        The LLM provider to use. Default is mistral.
+    model : str, optional
+        The name of the model to use. Default is
+        "codestral-latest".
+    host : str, optional
+        The host URL for the LLM provider. Default is
+        https://api.mistral.ai.
+    structured : bool, optional
+        Whether to enable structured output. Default is False.
+    """
+
+    provider: Literal["mistral", "ollama"] = "mistral"
+    model: str = "codestral-latest"
+    host: str = "https://api.mistral.ai"
     structured: bool = False
 
 
 @dataclass
 class ProjectConfig:
+    r"""
+    Configure the project settings for test generation.
+
+    The ProjectConfig class encapsulates the configuration settings for the
+    test generation process. It includes settings for the source root,
+    import prefix, global context, custom instructions, layout, discovery,
+    and LLM configuration.
+
+    Parameters
+    ----------
+    source_root : str, optional
+        The root directory of the source code. Default is src.
+    import_prefix : str, optional
+        The prefix for imports. Default is .
+    global_context : List[str], optional
+        A list of global context strings. Default is [].
+    custom_instructions : str, optional
+        Custom instructions for the test generation process. Default is .
+    layout : TestGenerationLayoutConfig, optional
+        The layout configuration for test generation. Default is
+        TestGenerationLayoutConfig().
+    discovery : DiscoveryConfig, optional
+        The discovery configuration for test generation. Default is
+        DiscoveryConfig().
+    llm : LLMConfig, optional
+        The LLM configuration for test generation. Default is LLMConfig().
+
+    See Also
+    --------
+    modular_pytest_gen.DiscoveryConfig :
+        Configure test discovery and generation behavior.
+    modular_pytest_gen.LLMConfig :
+        Configure the LLM provider and model.
+    modular_pytest_gen.TestGenerationLayoutConfig :
+        Configure test generation layout strategy.
+    """
+
     source_root: str = "src"
     import_prefix: str = ""
     global_context: List[str] = field(default_factory=list)
@@ -53,6 +165,33 @@ class ProjectConfig:
 
 
 def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
+    r"""
+    Load project configuration from a TOML file.
+
+    Parses a TOML configuration file to extract project settings. If the
+    file does not exist, returns a default configuration.
+
+    Parameters
+    ----------
+    config_path : Path | str, optional
+        Path to the TOML configuration file. Default is autotest.toml.
+
+    Returns
+    -------
+    ProjectConfig
+        The parsed project configuration.
+
+        If the file does not exist or is empty, returns a default
+        configuration.
+
+    Raises
+    ------
+    ImportError
+        The 'tomli' library is required to parse TOML files on Python <
+        3.11.
+    ValueError
+        If the TOML file cannot be parsed.
+    """
 
     if tomllib is None:
         raise ImportError(
@@ -86,15 +225,15 @@ def load_config(config_path: Path | str = "autotest.toml") -> ProjectConfig:
         exclude_patterns=discovery_data.get(
             "exclude_patterns", ["*__init__.py", "*test_*.py"]
         ),
-        exclude_functions=discovery_data.get("exclude_functions", []),
+        exclude_nodes=discovery_data.get("exclude_nodes", []),
         include_classes=discovery_data.get("include_classes", False),
         max_class_lines=discovery_data.get("max_class_lines", 300),
     )
     llm_data = tool_data.get("llm", {})
     llm = LLMConfig(
-        provider=llm_data.get("provider", "ollama"),
-        model=llm_data.get("model", "qwen2.5-coder:7b-instruct-q8_0"),
-        host=llm_data.get("host", "http://localhost:11434"),
+        provider=llm_data.get("provider", "mistral"),
+        model=llm_data.get("model", "codestral-latest"),
+        host=llm_data.get("host", "https://api.mistral.ai"),
         structured=llm_data.get("structured", False),
     )
     return ProjectConfig(

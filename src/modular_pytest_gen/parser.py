@@ -5,7 +5,73 @@ from typing import Any, Dict, Optional, Set
 
 
 class ModuleParser:
+    r"""
+    Parse Python source code into structured metadata.
+
+    The ModuleParser class analyzes Python source files to extract
+    module-level components, including imports, constants, functions,
+    classes, and exceptions. It provides detailed metadata about each
+    component, including signatures, docstrings, and dependencies.
+
+    Parameters
+    ----------
+    file_path : str | Path
+        The path to the Python source file to be parsed.
+
+    Attributes
+    ----------
+    file_path : Path
+        The normalized path to the source file.
+    source_code : str
+        The raw content of the source file.
+    tree : ast.AST
+        The abstract syntax tree of the source code.
+
+    Methods
+    -------
+    parse :
+        Parse the source code and return structured metadata.
+    _build_target_metadata :
+        Build metadata for a specific target node.
+    _get_signature :
+        Get the signature of a function, method, or class.
+    _is_main_boilerplate :
+        Check if a node is a main boilerplate.
+    _get_node_value :
+        Get the value of a node.
+    _determine_profile :
+        Determine the profile of the module.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    SyntaxError
+        If the source code contains syntax errors.
+    """
+
     def __init__(self, file_path: str | Path):
+        r"""
+        Initialize a code parser with a file path.
+
+        Creates a parser instance for the specified file, reads its
+        contents, and constructs an Abstract Syntax Tree (AST)
+        representation.
+
+        Warnings
+        --------
+        Ensure the file exists and is readable to avoid runtime errors.
+
+        See Also
+        --------
+        ast.parse :
+            Standard library function used to generate the AST.
+
+        Notes
+        -----
+        The parser handles both string paths and Path objects for file
+        location specification.
+        """
 
         self.file_path = Path(file_path)
         with open(self.file_path, "r", encoding="utf-8") as f:
@@ -13,6 +79,43 @@ class ModuleParser:
         self.tree = ast.parse(self.source_code)
 
     def parse(self) -> Dict[str, Any]:
+        r"""
+        Parse the AST tree into a structured metadata dictionary.
+
+        This method processes the Abstract Syntax Tree (AST) of a Python
+        module, extracting and organizing information about imports,
+        constants, exceptions, classes, functions, and methods. It also
+        identifies free-floating code and determines the module's profile.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary containing the parsed metadata with the following
+            keys:
+
+            - `filename`: The name of the file being parsed.
+            - `module_docstring`: The module-level docstring.
+            - `dunder_all`: The contents of the `__all__` list if present.
+            - `constants`: A dictionary of constants and their docstrings.
+            - `exceptions`: A list of custom exception classes.
+            - `classes`: A list of class definitions.
+            - `functions`: A list of function definitions.
+            - `methods`: A list of method definitions.
+            - `free_floating_code`: A list of code blocks not associated
+              with any specific construct.
+            - `flags`: A dictionary of flags indicating the presence of
+              certain constructs and the module's profile.
+
+        Raises
+        ------
+        AttributeError
+            If the AST tree is not properly initialized.
+
+        Warnings
+        --------
+        This method assumes the AST tree is correctly parsed and may
+        produce incorrect results if the tree is malformed.
+        """
 
         import_registry: Dict[str, Dict[str, Any]] = {}
         free_floating_registry: Dict[str, str] = {}
@@ -171,6 +274,58 @@ class ModuleParser:
         parent_class_name=None,
         class_methods=None,
     ) -> Dict[str, Any]:
+        r"""
+        Constructs metadata for a target AST node.
+
+        This method aggregates structural and contextual information about
+        a given AST node, including its dependencies, imports, and local
+        context. It is used internally by the AST scanner to provide
+        comprehensive metadata for code analysis and documentation
+        generation.
+
+        Parameters
+        ----------
+        node : ast.AST
+            The AST node to analyze.
+        import_registry : Dict[str, Dict[str, Any]]
+            A registry of imported modules and their metadata.
+        free_floating_registry : Dict[str, str]
+            A registry of free-floating code blocks and their associated
+            names.
+        internal_sibling_registry : Dict[str, str]
+            A registry of internal sibling code blocks and their associated
+            names.
+        parent_class_name : Optional[str], optional
+            The name of the parent class if the node is a method.
+        class_methods : Optional[Dict[str, str]], optional
+            A dictionary of class methods and their code.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary containing the following keys:
+
+            - `name`: The qualified name of the node.
+            - `signature`: The signature of the node.
+            - `code`: The cleaned-up code of the node.
+            - `docstring`: The docstring of the node.
+            - `external_imports`: A list of external imports used by the
+              node.
+            - `local_context_code`: A list of local context code blocks
+              used by the node.
+            - `used_names`: A list of names used by the node.
+
+        See Also
+        --------
+        ast.AST :
+            The base class for all AST nodes.
+        ast.walk :
+            A function to recursively walk an AST node.
+        ast.unparse :
+            A function to convert an AST node back to source code.
+        ast.get_docstring :
+            A function to extract the docstring from an AST node.
+        """
 
         immediate_names: Set[str] = set()
         for child in ast.walk(node):
@@ -271,6 +426,37 @@ class ModuleParser:
     def _get_signature(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
     ) -> str:
+        r"""
+        Extracts the signature string from an AST node.
+
+        This method is used internally to generate the signature string for
+        a given AST node, which can be a function, async function, or class
+        definition. The signature string includes decorators, the node
+        name, base classes for classes, arguments for functions, and return
+        annotations if present.
+
+        Parameters
+        ----------
+        node : ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+            The AST node from which to extract the signature string.
+
+        Returns
+        -------
+        str
+            The signature string of the AST node.
+
+            For a class, the string includes the class name and base
+            classes.
+
+            For a function or async function, the string includes the
+            function name, arguments, and return annotation if present.
+
+        Raises
+        ------
+        TypeError
+            If the node is not an instance of ast.FunctionDef,
+            ast.AsyncFunctionDef, or ast.ClassDef.
+        """
 
         decorator_list = [f"@{ast.unparse(d)}" for d in node.decorator_list]
         decorators = f"{' '.join(decorator_list)}\n" if decorator_list else ""
@@ -288,6 +474,30 @@ class ModuleParser:
         return ""
 
     def _is_main_boilerplate(self, node: ast.If) -> bool:
+        r"""
+        Check if ast node is main guard block.
+
+        This method checks if the provided AST node is a conditional
+        statement that evaluates whether the script is being run directly
+        or imported. It verifies the structure of the node to ensure it
+        matches the boilerplate pattern.
+
+        Parameters
+        ----------
+        node : ast.If
+            The AST node to be evaluated.
+
+        Returns
+        -------
+        bool
+            Returns `True` if the node matches the boilerplate pattern,
+            otherwise `False`.
+
+        Raises
+        ------
+        TypeError
+            If the provided node is not an instance of `ast.If`.
+        """
 
         if not isinstance(node.test, ast.Compare):
             return False
@@ -298,6 +508,28 @@ class ModuleParser:
         return "__name__" in elements and "__main__" in elements
 
     def _get_node_value(self, node: ast.AST) -> Optional[str]:
+        r"""
+        Retrieve the string value from an AST node.
+
+        This method extracts the string representation of a node's value if
+        it is either a variable name or a constant string.
+
+        Parameters
+        ----------
+        node : ast.AST
+            The AST node to extract the value from.
+
+        Returns
+        -------
+        Optional[str]
+            The string value of the node if it is a variable name or
+            constant string, otherwise `None`.
+
+        Raises
+        ------
+        TypeError
+            If the node type is not supported for value extraction.
+        """
 
         if isinstance(node, ast.Name):
             return node.id
@@ -306,6 +538,40 @@ class ModuleParser:
         return None
 
     def _determine_profile(self, analysis: Dict[str, Any]) -> str:
+        r"""
+        Determine the module profile based on AST analysis results.
+
+        This method evaluates the AST analysis results to classify the
+        module into one of several predefined profiles. The classification
+        is based on the presence and quantity of functions, classes,
+        exceptions, and constants.
+
+        Parameters
+        ----------
+        analysis : Dict[str, Any]
+            A dictionary containing the AST analysis results with keys for
+            functions, classes, exceptions, and constants.
+
+        Returns
+        -------
+        str
+            The determined module profile, which can be one of the
+            following:
+
+            - `CONSTANT_REGISTRY`: If the module contains only constants.
+            - `EXCEPTION_REGISTRY`: If the module contains more exceptions
+              than functions and no classes.
+            - `FUNCTIONAL_UTILITY`: If the module contains functions but no
+              classes.
+            - `COMPLEX_MODULE`: If the module contains classes.
+            - `STANDARD_MODULE`: If none of the above conditions are met.
+
+        Raises
+        ------
+        KeyError
+            If the `analysis` dictionary is missing any of the required
+            keys (`functions`, `classes`, `exceptions`, `constants`).
+        """
 
         has_funcs = len(analysis["functions"]) > 0
         has_classes = len(analysis["classes"]) > 0

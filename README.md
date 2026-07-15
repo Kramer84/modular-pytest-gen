@@ -108,3 +108,18 @@ Invokes the bottom-up topological graph processing tree to generate or clean rep
 ### `autotest clean`
 
 Removes all temporary staging files, validation directories, and dry-run prompt files to restore a clean directory tree status.
+
+## 🐕 Dogfooding: Self-Documentation Performance
+
+The `autodoc` pipeline has been successfully validated by running it recursively against its own engine source modules. 
+
+### Core Benchmarks & Behaviors Observed
+* **Structural Integration:** The LibCST `AutodocInjector` successfully navigated complex class structural boundaries, maintaining absolute format conservation across whitespace, indent parameters, and inline developer notes.
+* **Constant Targeting via CST:** The module correctly targeted free-floating assignment nodes within `templates.py`, positioning raw string literals directly below assignments to simulate clean module-level metadata constants.
+
+### Critical Extraction Nuances (Review Required)
+While the pipeline accelerates code understanding, the underlying model demonstrates a structural bias toward **Defensive Over-Documentation**:
+* **Hallucinated Exception Layers:** The model regularly generates `Raises` documentation blocks (e.g., `TypeError`, `KeyError`) for structural checks it assumes *should* exist, even when the implementation uses safe fallbacks, typing coercions, or empty returns (`return ""`).
+* **Schema Redundancy:** Despite explicit systemic prompt parameters forbidding default values inside semantic parameters, models occasionally duplicate default markers inline rather than allowing the automatic formatting builders to parse them cleanly.
+
+Always perform a validation audit of the `Raises` blocks in a clean feature branch before completing an overwrite pass.

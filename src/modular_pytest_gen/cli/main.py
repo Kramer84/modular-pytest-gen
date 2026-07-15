@@ -31,6 +31,12 @@ app.command(
 
 
 def cli_entry():
+    r"""
+    Execute the CLI application
+
+    This function serves as the entry point for the command-line interface,
+    triggering the application's main execution flow.
+    """
 
     app()
 

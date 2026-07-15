@@ -9,6 +9,45 @@ from .layout import LayoutManager
 
 
 class TestMerger:
+    r"""
+    Merge generated test files into the final test suite.
+
+    The `TestMerger` class orchestrates the consolidation of verified test
+    files into the final test suite. It handles different layout
+    granularities and ensures safe merging of test files without
+    duplication.
+
+    Parameters
+    ----------
+    config : ProjectConfig
+        The project configuration containing layout and root directory
+        settings.
+    layout_manager : LayoutManager
+        The layout manager responsible for determining the structure of the
+        test suite.
+    final_test_root : str | Path
+        The root directory where the final test suite will be stored.
+    tmp_dir : Optional[str | Path], optional
+        The temporary directory containing verified test files. If not
+        provided, a default temporary directory is used.
+
+    Methods
+    -------
+    merge_all :
+        Merge all verified test files into the final test suite.
+
+    Raises
+    ------
+    ValueError
+        Raised if the layout granularity specified in the configuration is
+        not supported.
+
+    Warnings
+    --------
+    Ensure that the temporary directory contains verified test files before
+    running the merge operation.
+    """
+
     def __init__(
         self,
         config: ProjectConfig,
@@ -16,6 +55,31 @@ class TestMerger:
         final_test_root: str | Path,
         tmp_dir: Optional[str | Path] = None,
     ):
+        r"""
+        Configure test generator with project settings.
+
+        Constructs a test generator instance with the provided
+        configuration, layout manager, and directory paths. The instance
+        will manage test generation and execution workflows.
+
+        Warnings
+        --------
+        Ensure the `final_test_root` directory exists and is writable to
+        avoid runtime errors during test generation.
+
+        See Also
+        --------
+        ProjectConfig :
+            Configuration object containing project settings and paths.
+        LayoutManager :
+            Manager for handling project directory layouts and file
+            operations.
+
+        Notes
+        -----
+        The `tmp_dir` parameter defaults to a temporary directory path
+        derived from the project's test root if not specified.
+        """
 
         self.config = config
         self.layout = layout_manager
@@ -26,6 +90,30 @@ class TestMerger:
             self.tmp_dir = Path(f"{self.config.layout.test_root}.tmp")
 
     def merge_all(self):
+        r"""
+        Merge all verified test files into the final test directory
+
+        This method consolidates verified test files from the temporary
+        directory into the final test directory. It handles different
+        layout granularities (function, class, module) and ensures no
+        duplicate tests are added.
+
+        Returns
+        -------
+        None
+            The method does not return any value.
+
+        Raises
+        ------
+        ValueError
+            If the layout granularity is not one of 'function', 'class', or
+            'module'.
+
+        Warns
+        -----
+        UserWarning
+            If a verified file cannot be parsed.
+        """
 
         final_root = Path(self.final_test_root)
         if not self.tmp_dir.exists():

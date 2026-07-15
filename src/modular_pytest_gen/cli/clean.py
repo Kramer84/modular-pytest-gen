@@ -15,6 +15,21 @@ def clean_app(
         str, typer.Option("--dry-run-dir", help="Directory containing dry run prompts")
     ] = "dry_run_prompts",
 ):
+    r"""
+    Cleans the workspace by removing temporary directories.
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration file. Default is autotest.toml.
+    dry_run_dir : str, optional
+        Directory containing dry run prompts. Default is dry_run_prompts.
+
+    Raises
+    ------
+    typer.Exit
+        Configuration file loading fails.
+    """
 
     try:
         config = load_config(config_path)

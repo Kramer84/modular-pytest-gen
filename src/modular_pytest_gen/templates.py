@@ -24,15 +24,12 @@ CRITICAL EXECUTION RULES:
 7. NUMPY & ARRAYS: NEVER use `==` to compare numpy arrays. Use `np.array_equal()` or `np.allclose()`.
 8. You must use the provided function tool to output your response as structured JSON. Do not write conversational text.
 """
-ENVIRONMENT_CONTEXT_HEADER = """
-    AVAILABLE ENVIRONMENT CONTEXT (Already imported/loaded in execution space):
-"""
-GLOBAL_CONSTANTS_HEADER = """--- Global Constants ---
-"""
-CUSTOM_EXCEPTIONS_HEADER = """--- Registered Custom Exceptions ---
-"""
-USER_PROMPT_HEADER = """
-Generate a pytest suite for the following target function module.
+ENVIRONMENT_CONTEXT_HEADER = (
+    """AVAILABLE ENVIRONMENT CONTEXT (Already imported/loaded in execution space):\n"""
+)
+GLOBAL_CONSTANTS_HEADER = """--- Global Constants ---\n"""
+CUSTOM_EXCEPTIONS_HEADER = """--- Registered Custom Exceptions ---\n"""
+USER_PROMPT_HEADER = """Generate a pytest suite for the following target function module.
 The function is segmented into its signature (providing type annotations), docstring, and implementation code, for clarity. 
 Local context code blocks are also provided, as they can be necessary for the function to operate correctly.
 
@@ -40,43 +37,29 @@ NOTE: The implementation code may lack defensive checks described in the docstri
 
 ...
 """
-USER_PROMPT_IMPORTS = """
-Target Package Access Route (For Test Script Top-Level):
+USER_PROMPT_IMPORTS = """\nTarget Package Access Route (For Test Script Top-Level):
 ```python
-{import_statement}
 {function_import_statement}
+
 ```
 """
-USER_PROMPT_LOCAL_CONTEXT = """
-    Target Module Runtime Context:
-    ```python
-    {context_blocks}
-    ```
-"""
-USER_PROMPT_SIGNATURE = """
-Function Signature:
+USER_PROMPT_LOCAL_CONTEXT = """\nTarget Module Runtime Context:
 ```python
-{signature}
+{context_blocks}
+
 ```
 """
-USER_PROMPT_DOCSTRING = """
-Function Docstring:
-{docstring}
+USER_PROMPT_BASE = """\nFull Target Definition (Signature, Docstring & Implementation):
+```python
+{full_code}
+
+```
 """
-USER_PROMPT_BASE = """
-    Function Implementation:
-    ```python
-    {import_statement}
-    
-    {code}
-    ```
-"""
-USER_PROMPT_DIRECTIVES = """Additional Target Directives:
+USER_PROMPT_DIRECTIVES = """\nAdditional Target Directives:
 {custom_instructions}
 
 """
-USER_PROMPT_FOOTER = """
-Generate the comprehensive test code block.
+USER_PROMPT_FOOTER = """Generate the comprehensive test code block.
 """
 NUMPY_STYLE_GUIDE = """NUMPY STYLE INSTRUCTIONS:
 1. TONE: Professional prose, active, and intent-focused. Do not translate code logic literally step-by-step.

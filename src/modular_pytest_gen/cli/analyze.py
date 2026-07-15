@@ -21,6 +21,21 @@ def analyze_app(
         ),
     ] = 0,
 ):
+    r"""
+    Analyze the application's test registry.
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration file. Default is autotest.toml.
+    verbose : int, optional
+        Verbosity level. Default is 0.
+
+    Raises
+    ------
+    Exception
+        Raised when there is an error loading the configuration file.
+    """
 
     try:
         config = load_config(config_path)
