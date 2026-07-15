@@ -219,3 +219,15 @@ __marimo__/
 
 # VsCode
 .vscode/
+
+# ==============================================================================
+# Modular Pytest & Doc Gen - Generation Artifacts
+# ==============================================================================
+
+# Temporary test workspaces and intermediate validation directories
+tests.tmp/
+tests/generated/.tmp/
+
+# Markdown prompt logs generated during dry-run executions
+dry_run_prompts/
+dry_run_autodoc_prompts/
