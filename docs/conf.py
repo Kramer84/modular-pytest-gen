@@ -11,7 +11,8 @@ release = "0.1.0"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
-    "sphinx.ext.napoleon",  # Translates NumPy-style docstrings into Sphinx
+    "sphinx.ext.napoleon",
+    "myst_parser",
 ]
 
 templates_path = ["_templates"]
@@ -19,3 +20,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+
+# Strip type hints from signatures and move them to parameter descriptions
+autodoc_typehints = "description"
+
+# Optional: Prevents fully qualified paths from lengthening signatures (e.g., list vs typing.List)
+autodoc_typehints_format = "short"
